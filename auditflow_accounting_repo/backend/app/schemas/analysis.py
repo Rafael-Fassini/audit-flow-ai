@@ -8,6 +8,7 @@ from app.models.document_section import ChunkedDocument, ParsedDocument
 from app.models.knowledge_base import RetrievalResult
 from app.models.report import AnalysisReport
 from app.models.risk import RiskInferenceResult
+from app.schemas.agents import AgentRole
 
 
 ANALYSIS_CONTRACT_VERSION = "analysis.v1"
@@ -27,16 +28,6 @@ class AnalysisStage(str, Enum):
     KNOWLEDGE_RETRIEVAL = "knowledge_retrieval"
     RISK_INFERENCE = "risk_inference"
     REPORT_ASSEMBLY = "report_assembly"
-
-
-class AnalysisAgentRole(str, Enum):
-    DOCUMENT_LOADER = "document_loader"
-    DOCUMENT_PARSER = "document_parser"
-    DOCUMENT_CHUNKER = "document_chunker"
-    PROCESS_STRUCTURER = "process_structurer"
-    KNOWLEDGE_RETRIEVER = "knowledge_retriever"
-    RISK_INFERENCE = "risk_inference"
-    REPORT_ASSEMBLER = "report_assembler"
 
 
 class AnalysisContractMetadata(BaseModel):
@@ -123,7 +114,7 @@ class ReportAssemblyResult(BaseModel):
 class AnalysisMigrationPoint(BaseModel):
     stage: AnalysisStage
     current_owner: str = Field(min_length=1)
-    target_agent_role: AnalysisAgentRole
+    target_agent_role: AgentRole
     reusable_services: list[str] = Field(default_factory=list)
     contract_inputs: list[str] = Field(default_factory=list)
     contract_outputs: list[str] = Field(default_factory=list)
@@ -135,7 +126,7 @@ ANALYSIS_MIGRATION_POINTS: tuple[AnalysisMigrationPoint, ...] = (
     AnalysisMigrationPoint(
         stage=AnalysisStage.DOCUMENT_LOADING,
         current_owner="DocumentAnalysisOrchestrator.analyze_document",
-        target_agent_role=AnalysisAgentRole.DOCUMENT_LOADER,
+        target_agent_role=AgentRole.DOCUMENT_LOADER,
         reusable_services=["JsonDocumentRepository"],
         contract_inputs=["document_id"],
         contract_outputs=["DocumentLoadingResult"],
@@ -147,7 +138,7 @@ ANALYSIS_MIGRATION_POINTS: tuple[AnalysisMigrationPoint, ...] = (
     AnalysisMigrationPoint(
         stage=AnalysisStage.PARSING,
         current_owner="DocumentAnalysisOrchestrator.analyze_document",
-        target_agent_role=AnalysisAgentRole.DOCUMENT_PARSER,
+        target_agent_role=AgentRole.DOCUMENT_PARSER,
         reusable_services=["DocumentParser"],
         contract_inputs=["DocumentParsingRequest"],
         contract_outputs=["DocumentParsingResult"],
@@ -159,7 +150,7 @@ ANALYSIS_MIGRATION_POINTS: tuple[AnalysisMigrationPoint, ...] = (
     AnalysisMigrationPoint(
         stage=AnalysisStage.CHUNKING,
         current_owner="DocumentAnalysisOrchestrator.analyze_document",
-        target_agent_role=AnalysisAgentRole.DOCUMENT_CHUNKER,
+        target_agent_role=AgentRole.DOCUMENT_CHUNKER,
         reusable_services=["DocumentChunker"],
         contract_inputs=["DocumentChunkingRequest"],
         contract_outputs=["DocumentChunkingResult"],
@@ -174,7 +165,7 @@ ANALYSIS_MIGRATION_POINTS: tuple[AnalysisMigrationPoint, ...] = (
     AnalysisMigrationPoint(
         stage=AnalysisStage.PROCESS_STRUCTURING,
         current_owner="DocumentAnalysisOrchestrator.analyze_document",
-        target_agent_role=AnalysisAgentRole.PROCESS_STRUCTURER,
+        target_agent_role=AgentRole.PROCESS_STRUCTURER,
         reusable_services=["AccountingProcessExtractor"],
         contract_inputs=["ProcessStructuringRequest"],
         contract_outputs=["ProcessStructuringResult"],
@@ -189,7 +180,7 @@ ANALYSIS_MIGRATION_POINTS: tuple[AnalysisMigrationPoint, ...] = (
     AnalysisMigrationPoint(
         stage=AnalysisStage.KNOWLEDGE_RETRIEVAL,
         current_owner="get_document_analysis_orchestrator",
-        target_agent_role=AnalysisAgentRole.KNOWLEDGE_RETRIEVER,
+        target_agent_role=AgentRole.KNOWLEDGE_RETRIEVER,
         reusable_services=[
             "DeterministicEmbeddingProvider",
             "KnowledgeIndexer",
@@ -212,7 +203,7 @@ ANALYSIS_MIGRATION_POINTS: tuple[AnalysisMigrationPoint, ...] = (
     AnalysisMigrationPoint(
         stage=AnalysisStage.RISK_INFERENCE,
         current_owner="get_document_analysis_orchestrator",
-        target_agent_role=AnalysisAgentRole.RISK_INFERENCE,
+        target_agent_role=AgentRole.RISK_INFERENCE,
         reusable_services=[
             "AccountingRiskRules",
             "HybridRiskInferenceService",
@@ -231,7 +222,7 @@ ANALYSIS_MIGRATION_POINTS: tuple[AnalysisMigrationPoint, ...] = (
     AnalysisMigrationPoint(
         stage=AnalysisStage.REPORT_ASSEMBLY,
         current_owner="DocumentAnalysisOrchestrator.analyze_document",
-        target_agent_role=AnalysisAgentRole.REPORT_ASSEMBLER,
+        target_agent_role=AgentRole.REPORT_ASSEMBLER,
         reusable_services=[
             "AnalysisReportBuilder",
             "FindingScorer",

@@ -25,6 +25,11 @@ def test_settings_accept_environment_overrides() -> None:
         qdrant_url="http://qdrant:6333",
         openai_api_key="secret",
         openai_model="gpt-test",
+        agent_provider="openai",
+        agent_model="gpt-agent-test",
+        agent_temperature=0.1,
+        agent_timeout_seconds=30,
+        agent_max_output_tokens=2048,
     )
 
     assert settings.app_name == "AuditFlow Test"

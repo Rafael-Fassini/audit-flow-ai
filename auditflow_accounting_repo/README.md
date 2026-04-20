@@ -62,6 +62,11 @@ Required application variables:
 - `QDRANT_URL`
 - `OPENAI_API_KEY`
 - `OPENAI_MODEL`
+- `AGENT_PROVIDER`
+- `AGENT_MODEL`
+- `AGENT_TEMPERATURE`
+- `AGENT_TIMEOUT_SECONDS`
+- `AGENT_MAX_OUTPUT_TOKENS`
 
 Required Docker Compose service variables:
 - `POSTGRES_DB`
@@ -163,6 +168,7 @@ review flags. Reports are also persisted to `ANALYSIS_REPORT_PATH`.
 ```text
 backend/
   app/
+    agents/
     api/
     core/
     db/
