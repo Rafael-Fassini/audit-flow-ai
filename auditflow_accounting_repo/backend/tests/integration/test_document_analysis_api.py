@@ -315,6 +315,10 @@ async def test_analyze_document_returns_multi_agent_findings_for_known_memo(tmp_
     assert payload["status"] == "completed"
     assert payload["scoped_answer"]["conclusion"] == "YES"
     assert payload["scoped_answer"]["top_findings"]
+    assert payload["final_response"]["conclusion"] == "YES"
+    assert 1 <= len(payload["final_response"]["top_findings"]) <= 5
+    assert "NBC TG / CPC 00" in payload["final_response"]["normative_rationale"]
+    assert payload["final_response"]["recommended_action"]
     assert payload["summary"]["source_filename"] == "ap_red_flag_memo.txt"
     assert payload["summary"]["total_findings"] == len(payload["findings"])
     assert payload["summary"]["review_required_count"] >= 1
@@ -465,6 +469,11 @@ async def test_out_of_scope_document_returns_explicit_scope_finding(tmp_path) ->
     assert payload["scoped_answer"]["conclusion"] == (
         "INDETERMINATE / HUMAN REVIEW REQUIRED"
     )
+    assert payload["final_response"]["conclusion"] == (
+        "INDETERMINATE / HUMAN REVIEW REQUIRED"
+    )
+    assert payload["final_response"]["top_findings"] == []
+    assert payload["final_response"]["missing_items"]
     assert payload["summary"]["total_findings"] == 1
     assert payload["summary"]["review_required_count"] == 1
     assert payload["findings"][0]["source"] == "product_scope"

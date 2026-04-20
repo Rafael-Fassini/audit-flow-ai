@@ -1,6 +1,7 @@
 from app.models.report import (
     AnalysisReport,
     AnalysisSummary,
+    FinalResponse,
     FindingScore,
     ReportFinding,
     ScopedQuestionAnswer,
@@ -40,6 +41,7 @@ class ReportAgent:
                 for question in reviewer_output.follow_up_questions
             ]
         )
+        scoped_answer = ScopedQuestionAnswer.from_findings(findings)
 
         return base_report.model_copy(
             deep=True,
@@ -59,7 +61,12 @@ class ReportAgent:
                         if finding.score.review_required
                     ),
                 ),
-                "scoped_answer": ScopedQuestionAnswer.from_findings(findings),
+                "scoped_answer": scoped_answer,
+                "final_response": FinalResponse.from_analysis(
+                    scoped_answer=scoped_answer,
+                    findings=findings,
+                    follow_up_questions=follow_up_questions,
+                ),
                 "findings": findings,
                 "evidence": evidence,
                 "follow_up_questions": follow_up_questions,

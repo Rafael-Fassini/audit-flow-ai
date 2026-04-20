@@ -68,6 +68,12 @@ def test_report_builder_generates_stable_structured_payload() -> None:
     assert report.scoped_answer.conclusion == ScopedConclusion.YES
     assert report.scoped_answer.top_findings
     assert report.scoped_answer.top_findings[0].evidence_text == "debit expense"
+    assert report.final_response.conclusion == ScopedConclusion.YES
+    assert len(report.final_response.top_findings) <= 5
+    assert report.final_response.top_findings[0].title == "Missing credit"
+    assert report.final_response.missing_items
+    assert "NBC TG / CPC 00" in report.final_response.normative_rationale
+    assert report.final_response.recommended_action
     assert len(report.findings) == 2
     assert len(report.evidence) == 1
     assert report.findings[0].score.severity == "medium"

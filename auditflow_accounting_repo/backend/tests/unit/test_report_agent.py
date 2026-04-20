@@ -70,6 +70,13 @@ def test_report_agent_appends_reviewed_findings_without_mutating_base_report() -
     assert final_report.scoped_answer.top_findings[0].finding_id == (
         "agent-review-control-gap"
     )
+    assert final_report.final_response.conclusion == ScopedConclusion.YES
+    assert final_report.final_response.top_findings[0].title == (
+        "Control gap is documented"
+    )
+    assert len(final_report.final_response.top_findings) <= 5
+    assert "NBC TG / CPC 00" in final_report.final_response.normative_rationale
+    assert final_report.final_response.recommended_action.startswith("Review")
     assert final_report.findings[0].id == "agent-review-control-gap"
     assert final_report.findings[0].source == "multi_agent"
     assert final_report.findings[0].evidence[0].text == (

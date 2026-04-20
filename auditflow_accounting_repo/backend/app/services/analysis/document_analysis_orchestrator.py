@@ -8,6 +8,7 @@ from app.models.document_section import ParsedDocument
 from app.models.report import (
     AnalysisStatus,
     AnalysisSummary,
+    FinalResponse,
     FindingScore,
     ReportFinding,
     ScopedQuestionAnswer,
@@ -161,6 +162,22 @@ class DocumentAnalysisOrchestrator:
                 )
             ],
         )
+        scoped_answer = ScopedQuestionAnswer.from_findings([finding])
+        follow_up_questions = [
+            FollowUpQuestion(
+                id="question-product-scope",
+                question=(
+                    "Can the request be provided as a memorandum, walkthrough, "
+                    "payment support, or accounting-entry support document "
+                    "within the approved AuditFlow scope?"
+                ),
+                rationale=(
+                    "The current document cannot be assessed as a broad audit, "
+                    "tax, legal, or unrestricted reform analysis."
+                ),
+                related_finding_ids=[finding.id],
+            )
+        ]
         return AnalysisReport(
             analysis_id=str(uuid4()),
             status=AnalysisStatus.COMPLETED,
@@ -172,23 +189,14 @@ class DocumentAnalysisOrchestrator:
                 high_severity_findings=0,
                 review_required_count=1,
             ),
-            scoped_answer=ScopedQuestionAnswer.from_findings([finding]),
+            scoped_answer=scoped_answer,
+            final_response=FinalResponse.from_analysis(
+                scoped_answer=scoped_answer,
+                findings=[finding],
+                follow_up_questions=follow_up_questions,
+            ),
             process=process,
             findings=[finding],
             evidence=finding.evidence,
-            follow_up_questions=[
-                FollowUpQuestion(
-                    id="question-product-scope",
-                    question=(
-                        "Can the request be provided as a memorandum, walkthrough, "
-                        "payment support, or accounting-entry support document "
-                        "within the approved AuditFlow scope?"
-                    ),
-                    rationale=(
-                        "The current document cannot be assessed as a broad audit, "
-                        "tax, legal, or unrestricted reform analysis."
-                    ),
-                    related_finding_ids=[finding.id],
-                )
-            ],
+            follow_up_questions=follow_up_questions,
         )

@@ -6,6 +6,7 @@ from app.models.report import (
     AnalysisReport,
     AnalysisStatus,
     AnalysisSummary,
+    FinalResponse,
     ReportFinding,
     ScopedQuestionAnswer,
 )
@@ -41,12 +42,19 @@ class AnalysisReportBuilder:
             ),
         )
 
+        scoped_answer = ScopedQuestionAnswer.from_findings(findings)
+
         return AnalysisReport(
             analysis_id=analysis_id or str(uuid4()),
             status=AnalysisStatus.COMPLETED,
             generated_at=datetime.now(timezone.utc),
             summary=summary,
-            scoped_answer=ScopedQuestionAnswer.from_findings(findings),
+            scoped_answer=scoped_answer,
+            final_response=FinalResponse.from_analysis(
+                scoped_answer=scoped_answer,
+                findings=findings,
+                follow_up_questions=risk_result.follow_up_questions,
+            ),
             process=process,
             findings=findings,
             evidence=evidence,
