@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     upload_storage_dir: Path = Path("storage/uploads")
     document_metadata_path: Path = Path("storage/document_metadata.json")
     max_upload_size_bytes: int = 10 * 1024 * 1024
+    knowledge_collection_name: str = "auditflow_knowledge"
+    embedding_vector_size: int = 64
+    retrieval_top_k: int = 5
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
