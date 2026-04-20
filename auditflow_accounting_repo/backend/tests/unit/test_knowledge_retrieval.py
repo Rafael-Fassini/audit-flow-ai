@@ -7,9 +7,13 @@ from app.models.accounting_process import (
     EvidenceSnippet,
 )
 from app.models.knowledge_base import (
+    DocumentFamily,
+    DocumentScope,
+    AuthorityLevel,
     KnowledgeCategory,
     KnowledgeDocument,
     KnowledgeSnippet,
+    RegimeApplicability,
 )
 from app.services.retrieval.embeddings import DeterministicEmbeddingProvider
 from app.services.retrieval.curated_knowledge import default_knowledge_documents
@@ -122,6 +126,32 @@ def test_vector_store_rejects_wrong_vector_size() -> None:
         )
 
 
+def test_retrieval_filters_and_prioritizes_by_scope_metadata() -> None:
+    vector_store = InMemoryVectorStore()
+    embedding_provider = DeterministicEmbeddingProvider(vector_size=32)
+    collection_name = "knowledge"
+    KnowledgeIndexer(vector_store, embedding_provider, collection_name).index_documents(
+        [_scoped_knowledge_document()]
+    )
+    retrieval_service = KnowledgeRetrievalService(
+        vector_store=vector_store,
+        embedding_provider=embedding_provider,
+        collection_name=collection_name,
+        default_limit=2,
+    )
+
+    general_results = retrieval_service.retrieve_for_query("account classification rule")
+    dere_results = retrieval_service.retrieve_for_query(
+        "account classification rule DeRE",
+        metadata_filter={"document_family": DocumentFamily.DERE.value},
+        preferred_document_scope=DocumentScope.REGIME_ESPECIFICO.value,
+    )
+
+    assert general_results[0].snippet.document_family != DocumentFamily.DERE
+    assert dere_results
+    assert all(result.snippet.document_family == DocumentFamily.DERE for result in dere_results)
+
+
 def _knowledge_document() -> KnowledgeDocument:
     return KnowledgeDocument(
         id="accounting-guidance",
@@ -158,6 +188,47 @@ def _knowledge_document() -> KnowledgeDocument:
                 text="Journal entries should be approved before posting to the ledger.",
                 category=KnowledgeCategory.CONTROL_GUIDANCE,
                 tags=["approval", "control"],
+            ),
+        ],
+    )
+
+
+def _scoped_knowledge_document() -> KnowledgeDocument:
+    return KnowledgeDocument(
+        id="scoped-guidance",
+        title="Scoped guidance",
+        source="test",
+        category=KnowledgeCategory.POSTING_GUIDANCE,
+        snippets=[
+            KnowledgeSnippet(
+                id="general-classification",
+                document_id="scoped-guidance",
+                title="General account classification",
+                text="Account classification rule for general accounting context.",
+                category=KnowledgeCategory.ACCOUNTING_POLICY,
+                document_family=DocumentFamily.REFORMA_TRIBUTARIA,
+                document_scope=DocumentScope.NORMA_GERAL,
+                authority_level=AuthorityLevel.LEI,
+                regime_applicability=RegimeApplicability.GERAL,
+                source_file="LCP_214.pdf",
+                source_archive="kb.zip",
+                chunk_id="general-classification",
+                raw_text="Account classification rule for general accounting context.",
+            ),
+            KnowledgeSnippet(
+                id="dere-classification",
+                document_id="scoped-guidance",
+                title="DeRE account classification",
+                text="Account classification rule for DeRE regime specific context.",
+                category=KnowledgeCategory.POSTING_GUIDANCE,
+                document_family=DocumentFamily.DERE,
+                document_scope=DocumentScope.REGIME_ESPECIFICO,
+                authority_level=AuthorityLevel.MANUAL,
+                regime_applicability=RegimeApplicability.SERV_FIN,
+                source_file="Manual Usuario DeRE.pdf",
+                source_archive="kb.zip",
+                chunk_id="dere-classification",
+                raw_text="Account classification rule for DeRE regime specific context.",
             ),
         ],
     )

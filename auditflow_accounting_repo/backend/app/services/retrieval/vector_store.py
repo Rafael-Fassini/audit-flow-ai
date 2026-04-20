@@ -5,7 +5,14 @@ from uuid import NAMESPACE_URL, uuid5
 
 from qdrant_client import QdrantClient
 from qdrant_client.http.exceptions import UnexpectedResponse
-from qdrant_client.models import Distance, PointStruct, VectorParams
+from qdrant_client.models import (
+    Distance,
+    FieldCondition,
+    Filter,
+    MatchValue,
+    PointStruct,
+    VectorParams,
+)
 
 
 @dataclass(frozen=True)
@@ -34,6 +41,7 @@ class VectorStore:
         collection_name: str,
         query_vector: list[float],
         limit: int,
+        metadata_filter: dict[str, str] | None = None,
     ) -> list[VectorSearchResult]:
         raise NotImplementedError
 
@@ -62,20 +70,40 @@ class InMemoryVectorStore(VectorStore):
         collection_name: str,
         query_vector: list[float],
         limit: int,
+        metadata_filter: dict[str, str] | None = None,
     ) -> list[VectorSearchResult]:
         if collection_name not in self._collections:
             raise ValueError(f"Collection '{collection_name}' has not been created.")
 
-        results = [
-            VectorSearchResult(
-                id=point.id,
-                score=self._cosine_similarity(query_vector, point.vector),
-                payload=point.payload,
+        points = self._collections[collection_name].values()
+        if metadata_filter:
+            points = [
+                point
+                for point in points
+                if self._matches_metadata_filter(point.payload, metadata_filter)
+            ]
+
+        results = []
+        for point in points:
+            results.append(
+                VectorSearchResult(
+                    id=point.id,
+                    score=self._cosine_similarity(query_vector, point.vector),
+                    payload=point.payload,
+                )
             )
-            for point in self._collections[collection_name].values()
-        ]
         results.sort(key=lambda result: result.score, reverse=True)
         return results[:limit]
+
+    def _matches_metadata_filter(
+        self,
+        payload: dict[str, Any],
+        metadata_filter: dict[str, str],
+    ) -> bool:
+        snippet = payload.get("snippet", {})
+        if not isinstance(snippet, dict):
+            return False
+        return all(snippet.get(key) == value for key, value in metadata_filter.items())
 
     def _cosine_similarity(self, left: list[float], right: list[float]) -> float:
         if len(left) != len(right):
@@ -123,11 +151,13 @@ class QdrantVectorStore(VectorStore):
         collection_name: str,
         query_vector: list[float],
         limit: int,
+        metadata_filter: dict[str, str] | None = None,
     ) -> list[VectorSearchResult]:
         results = self._client.search(
             collection_name=collection_name,
             query_vector=query_vector,
             limit=limit,
+            query_filter=self._to_qdrant_filter(metadata_filter),
         )
         return [
             VectorSearchResult(
@@ -147,3 +177,19 @@ class QdrantVectorStore(VectorStore):
             return True
         except UnexpectedResponse:
             return False
+
+    def _to_qdrant_filter(
+        self,
+        metadata_filter: dict[str, str] | None,
+    ) -> Filter | None:
+        if not metadata_filter:
+            return None
+        return Filter(
+            must=[
+                FieldCondition(
+                    key=f"snippet.{key}",
+                    match=MatchValue(value=value),
+                )
+                for key, value in metadata_filter.items()
+            ]
+        )
