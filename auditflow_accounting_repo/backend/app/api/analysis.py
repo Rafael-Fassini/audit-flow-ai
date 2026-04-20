@@ -1,14 +1,12 @@
 from fastapi import APIRouter, Depends, status
 from fastapi import HTTPException
-from pydantic import BaseModel
 from qdrant_client import QdrantClient
 
 from app.core.config import get_settings
-from app.models.accounting_process import AccountingProcess
 from app.models.report import AnalysisReport
-from app.models.risk import RiskInferenceResult
 from app.repositories.analysis_report_repository import JsonAnalysisReportRepository
 from app.repositories.document_repository import JsonDocumentRepository
+from app.schemas.analysis import AnalysisAssemblyRequest
 from app.schemas.error import ErrorResponse
 from app.services.analysis.document_analysis_orchestrator import (
     DocumentAnalysisInputError,
@@ -33,12 +31,6 @@ from app.services.risk_engine.llm_inference import NoOpLLMRiskInferenceProvider
 from app.services.risk_engine.rules import AccountingRiskRules
 
 router = APIRouter(prefix="/analysis", tags=["analysis"])
-
-
-class AnalysisAssemblyRequest(BaseModel):
-    process: AccountingProcess
-    risk_result: RiskInferenceResult
-    analysis_id: str | None = None
 
 
 async def get_analysis_report_builder() -> AnalysisReportBuilder:
