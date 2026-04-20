@@ -14,7 +14,7 @@ The system ingests accounting-process documents and produces a structured analys
 - severity and confidence scores
 
 ## Current MVP scope
-- Backend only
+- Backend API with a lightweight React MVP frontend
 - No authentication
 - Single process focus: accounting entries
 - Domain emphasis: chart of accounts
@@ -96,6 +96,26 @@ From `backend/`:
 ```bash
 pytest -q
 ```
+
+## Run frontend locally
+The React frontend is under `frontend/`. It is a single-screen MVP that uses the
+real backend routes through a Vite `/api` proxy.
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open:
+```text
+http://localhost:5173
+```
+
+Keep the backend running on `http://localhost:8000`. The UI supports health
+status, document upload, and analysis by `document_id`. Backend-wide document
+listing and analysis-history retrieval are not exposed by the API yet, so the UI
+only lists documents and reports stored in the current browser session.
 
 ## API usage
 Interactive API docs are available at:

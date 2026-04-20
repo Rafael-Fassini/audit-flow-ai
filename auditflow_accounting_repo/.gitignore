@@ -39,6 +39,10 @@ Thumbs.db
 build/
 dist/
 *.egg-info/
+*.tsbuildinfo
+node_modules/
+frontend/dist/
+frontend/node_modules/
 
 # Docker
 docker-data/
