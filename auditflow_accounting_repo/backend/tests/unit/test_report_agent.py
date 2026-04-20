@@ -6,6 +6,10 @@ from app.models.report import (
     AnalysisReport,
     AnalysisStatus,
     AnalysisSummary,
+    FindingScore,
+    ReportFinding,
+    ScopedConclusion,
+    ScopedQuestionAnswer,
 )
 from app.schemas.agents import (
     AgentOutputMetadata,
@@ -62,6 +66,10 @@ def test_report_agent_appends_reviewed_findings_without_mutating_base_report() -
     assert final_report.summary.total_findings == 1
     assert final_report.summary.high_severity_findings == 1
     assert final_report.summary.review_required_count == 1
+    assert final_report.scoped_answer.conclusion == ScopedConclusion.YES
+    assert final_report.scoped_answer.top_findings[0].finding_id == (
+        "agent-review-control-gap"
+    )
     assert final_report.findings[0].id == "agent-review-control-gap"
     assert final_report.findings[0].source == "multi_agent"
     assert final_report.findings[0].evidence[0].text == (
@@ -70,6 +78,32 @@ def test_report_agent_appends_reviewed_findings_without_mutating_base_report() -
     assert final_report.follow_up_questions[0].id == (
         "agent-follow-up-review-control-gap"
     )
+
+
+def test_scoped_answer_returns_no_or_human_review_required() -> None:
+    empty_answer = ScopedQuestionAnswer.from_findings([])
+
+    assert empty_answer.conclusion == ScopedConclusion.NO
+    assert empty_answer.top_findings == []
+
+    no_evidence_finding = ReportFinding(
+        id="finding-without-evidence",
+        finding_type="risk",
+        category="control_gap",
+        title="Control gap",
+        description="Control issue without cited evidence.",
+        source="multi_agent",
+        score=FindingScore(
+            severity="medium",
+            confidence=0.5,
+            review_required=True,
+        ),
+    )
+
+    answer = ScopedQuestionAnswer.from_findings([no_evidence_finding])
+
+    assert answer.conclusion == ScopedConclusion.INDETERMINATE_HUMAN_REVIEW_REQUIRED
+    assert answer.top_findings == []
 
 
 def _base_report() -> AnalysisReport:

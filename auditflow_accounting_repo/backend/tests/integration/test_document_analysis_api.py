@@ -313,6 +313,8 @@ async def test_analyze_document_returns_multi_agent_findings_for_known_memo(tmp_
     assert analysis_response.status_code == 201
     payload = analysis_response.json()
     assert payload["status"] == "completed"
+    assert payload["scoped_answer"]["conclusion"] == "YES"
+    assert payload["scoped_answer"]["top_findings"]
     assert payload["summary"]["source_filename"] == "ap_red_flag_memo.txt"
     assert payload["summary"]["total_findings"] == len(payload["findings"])
     assert payload["summary"]["review_required_count"] >= 1
@@ -460,6 +462,9 @@ async def test_out_of_scope_document_returns_explicit_scope_finding(tmp_path) ->
     )
 
     assert payload["status"] == "completed"
+    assert payload["scoped_answer"]["conclusion"] == (
+        "INDETERMINATE / HUMAN REVIEW REQUIRED"
+    )
     assert payload["summary"]["total_findings"] == 1
     assert payload["summary"]["review_required_count"] == 1
     assert payload["findings"][0]["source"] == "product_scope"

@@ -10,6 +10,7 @@ from app.models.risk import (
     RiskInferenceResult,
     RiskItem,
 )
+from app.models.report import ScopedConclusion
 from app.services.reporting.analysis_report_builder import AnalysisReportBuilder
 from app.services.scoring.finding_scorer import FindingScorer
 
@@ -64,6 +65,9 @@ def test_report_builder_generates_stable_structured_payload() -> None:
     assert report.summary.process_name == "Accrual process"
     assert report.summary.total_findings == 2
     assert report.summary.review_required_count == 2
+    assert report.scoped_answer.conclusion == ScopedConclusion.YES
+    assert report.scoped_answer.top_findings
+    assert report.scoped_answer.top_findings[0].evidence_text == "debit expense"
     assert len(report.findings) == 2
     assert len(report.evidence) == 1
     assert report.findings[0].score.severity == "medium"

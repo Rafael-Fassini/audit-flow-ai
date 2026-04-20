@@ -7,6 +7,7 @@ from app.models.report import (
     AnalysisStatus,
     AnalysisSummary,
     ReportFinding,
+    ScopedQuestionAnswer,
 )
 from app.models.risk import FindingEvidence, RiskInferenceResult
 from app.services.scoring.finding_scorer import FindingScorer
@@ -45,6 +46,7 @@ class AnalysisReportBuilder:
             status=AnalysisStatus.COMPLETED,
             generated_at=datetime.now(timezone.utc),
             summary=summary,
+            scoped_answer=ScopedQuestionAnswer.from_findings(findings),
             process=process,
             findings=findings,
             evidence=evidence,

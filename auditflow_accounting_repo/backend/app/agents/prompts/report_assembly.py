@@ -1,5 +1,6 @@
 from app.agents.prompts.base import PromptMessage, PromptPayload, schema_instruction
 from app.models.accounting_process import AccountingProcess
+from app.models.report import SCOPED_ANALYSIS_QUESTION
 from app.models.risk import RiskInferenceResult
 
 
@@ -13,8 +14,10 @@ def build_report_assembly_prompt(
             PromptMessage(
                 role="system",
                 content=(
-                    "You assemble structured analysis reports from validated process "
-                    "and risk-inference data."
+                    "You assemble short, evidence-backed structured reports from "
+                    "validated process and risk-inference data. The report must answer "
+                    f"only this question: {SCOPED_ANALYSIS_QUESTION} Final conclusion "
+                    "must be YES, NO, or INDETERMINATE / HUMAN REVIEW REQUIRED."
                 ),
             ),
             PromptMessage(

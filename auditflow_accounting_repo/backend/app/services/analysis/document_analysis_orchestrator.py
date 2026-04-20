@@ -5,7 +5,13 @@ from app.models.report import AnalysisReport
 from app.agents.orchestrator import MultiAgentAnalysisOrchestrator
 from app.models.accounting_process import AccountingProcess
 from app.models.document_section import ParsedDocument
-from app.models.report import AnalysisStatus, AnalysisSummary, FindingScore, ReportFinding
+from app.models.report import (
+    AnalysisStatus,
+    AnalysisSummary,
+    FindingScore,
+    ReportFinding,
+    ScopedQuestionAnswer,
+)
 from app.models.risk import FindingEvidence, FollowUpQuestion
 from app.repositories.analysis_report_repository import AnalysisReportRepository
 from app.repositories.document_repository import DocumentRepository
@@ -166,6 +172,7 @@ class DocumentAnalysisOrchestrator:
                 high_severity_findings=0,
                 review_required_count=1,
             ),
+            scoped_answer=ScopedQuestionAnswer.from_findings([finding]),
             process=process,
             findings=[finding],
             evidence=finding.evidence,

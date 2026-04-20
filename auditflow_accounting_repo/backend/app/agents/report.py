@@ -1,4 +1,10 @@
-from app.models.report import AnalysisReport, AnalysisSummary, FindingScore, ReportFinding
+from app.models.report import (
+    AnalysisReport,
+    AnalysisSummary,
+    FindingScore,
+    ReportFinding,
+    ScopedQuestionAnswer,
+)
 from app.models.risk import FindingEvidence, FollowUpQuestion
 from app.schemas.agents import (
     ReviewedFinding,
@@ -53,6 +59,7 @@ class ReportAgent:
                         if finding.score.review_required
                     ),
                 ),
+                "scoped_answer": ScopedQuestionAnswer.from_findings(findings),
                 "findings": findings,
                 "evidence": evidence,
                 "follow_up_questions": follow_up_questions,
