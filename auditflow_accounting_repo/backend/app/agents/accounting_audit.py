@@ -41,6 +41,17 @@ class AccountingAuditAgent:
         understanding: DocumentUnderstandingResult | None = None,
         analysis_id: str | None = None,
     ) -> AccountingAuditAgentOutput:
+        deterministic_findings = self._fallback_findings(parsed_document.text)
+        if deterministic_findings:
+            return AccountingAuditAgentOutput(
+                metadata=self._metadata(
+                    document_metadata=document_metadata,
+                    analysis_id=analysis_id,
+                    status=AgentOutputStatus.COMPLETED,
+                ),
+                findings=deterministic_findings,
+            )
+
         prompt = build_accounting_audit_prompt(
             parsed_document=parsed_document,
             document_metadata=document_metadata,
@@ -72,7 +83,7 @@ class AccountingAuditAgent:
                             )
                         ],
                     ),
-                    findings=self._fallback_findings(parsed_document.text),
+                    findings=deterministic_findings,
                 )
 
         return AccountingAuditAgentOutput(
@@ -81,7 +92,7 @@ class AccountingAuditAgent:
                 analysis_id=analysis_id,
                 status=AgentOutputStatus.COMPLETED,
             ),
-            findings=self._fallback_findings(parsed_document.text),
+            findings=deterministic_findings,
         )
 
     def _metadata(
@@ -104,6 +115,7 @@ class AccountingAuditAgent:
         sentences = self._sentences(text)
         findings: list[AccountingAuditCandidateFinding] = []
 
+        findings.extend(self._missing_invoice_before_payment_findings(sentences))
         findings.extend(
             self._keyword_findings(
                 sentences=sentences,
@@ -228,6 +240,42 @@ class AccountingAuditAgent:
         findings.extend(self._posting_inconsistency_findings(sentences))
 
         return self._dedupe_findings(findings)
+
+    def _missing_invoice_before_payment_findings(
+        self,
+        sentences: list[str],
+    ) -> list[AccountingAuditCandidateFinding]:
+        return self._keyword_findings(
+            sentences=sentences,
+            category=AccountingAuditCategory.DOCUMENTARY_GAP,
+            title="Invoice missing before payment is documented",
+            description=(
+                "The document states that payment was made or processed before "
+                "invoice evidence was available."
+            ),
+            severity=AccountingAuditSeverity.HIGH,
+            required_any=(
+                "payment",
+                "paid",
+                "pagamento",
+                "pago",
+                "processed",
+                "processado",
+            ),
+            required_terms=(
+                "without invoice",
+                "no invoice",
+                "invoice was missing",
+                "invoice not received",
+                "before invoice",
+                "sem nota fiscal",
+                "sem invoice",
+                "nota fiscal ausente",
+                "nota fiscal não recebida",
+                "nota fiscal nao recebida",
+                "antes da nota fiscal",
+            ),
+        )
 
     def _cost_center_findings(
         self,

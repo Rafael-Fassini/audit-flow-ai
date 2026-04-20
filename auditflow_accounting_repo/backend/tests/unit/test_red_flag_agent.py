@@ -83,18 +83,13 @@ def test_red_flag_agent_rejects_provider_output_with_unsupported_evidence() -> N
             ).model_dump()
 
     output = RedFlagAgent(model_provider=UnsupportedEvidenceProvider()).detect(
-        _red_flag_document(),
+        _provider_document(),
         _metadata(),
     )
 
     assert output.metadata.status == AgentOutputStatus.NEEDS_REVIEW
     assert output.metadata.errors[0].code == "invalid_red_flag_model_output"
-    assert output.findings
-    assert all(
-        evidence.text in _red_flag_document().text
-        for finding in output.findings
-        for evidence in finding.evidence
-    )
+    assert output.findings == []
 
 
 def test_red_flag_agent_accepts_valid_provider_json_with_document_evidence() -> None:
@@ -109,11 +104,11 @@ def test_red_flag_agent_accepts_valid_provider_json_with_document_evidence() -> 
                 id="informal-approval-1",
                 red_flag_type=RedFlagType.INFORMAL_APPROVAL,
                 title="Informal approval channel is documented",
-                description="Approval was documented through WhatsApp.",
+                description="Approval wording requires review.",
                 severity=RedFlagSeverity.MEDIUM,
                 evidence=[
                     RedFlagEvidence(
-                        text="Manager approval was sent by WhatsApp message."
+                        text="Manager approval was documented in the workflow."
                     )
                 ],
             )
@@ -125,12 +120,42 @@ def test_red_flag_agent_accepts_valid_provider_json_with_document_evidence() -> 
             return expected.model_dump_json()
 
     output = RedFlagAgent(model_provider=ValidProvider()).detect(
-        _red_flag_document(),
+        _provider_document(),
         _metadata(),
     )
 
     assert output.findings == expected.findings
     assert output.metadata.status == AgentOutputStatus.COMPLETED
+
+
+def test_red_flag_agent_skips_provider_when_deterministic_checks_fire() -> None:
+    class FailingProvider:
+        def generate(self, prompt):
+            raise AssertionError("provider should not be called")
+
+    output = RedFlagAgent(model_provider=FailingProvider()).detect(
+        _red_flag_document(),
+        _metadata(),
+    )
+
+    assert output.metadata.status == AgentOutputStatus.COMPLETED
+    assert output.findings
+
+
+def test_red_flag_agent_detects_missing_invoice_before_payment_wording() -> None:
+    document = ParsedDocument(
+        filename="payment_without_invoice.txt",
+        document_format=DocumentFormat.TXT,
+        text="Payment was processed without invoice support attached.",
+    )
+
+    output = RedFlagAgent().detect(document, _metadata())
+
+    assert any(
+        finding.red_flag_type == RedFlagType.PAYMENT_BEFORE_INVOICE
+        and "without prior invoice" in finding.title
+        for finding in output.findings
+    )
 
 
 def test_red_flag_output_schema_requires_evidence_and_unique_ids() -> None:
@@ -219,5 +244,16 @@ def _red_flag_document() -> ParsedDocument:
             "Payment was transferred to a personal account not registered to the supplier. "
             "Payment instructions with PIX key were sent by WhatsApp message. "
             "Urgent override was requested without support or evidence."
+        ),
+    )
+
+
+def _provider_document() -> ParsedDocument:
+    return ParsedDocument(
+        filename="provider_red_flags.txt",
+        document_format=DocumentFormat.TXT,
+        text=(
+            "Manager approval was documented in the workflow. "
+            "The invoice and contract were attached before payment."
         ),
     )

@@ -39,6 +39,17 @@ class RedFlagAgent:
         understanding: DocumentUnderstandingResult | None = None,
         analysis_id: str | None = None,
     ) -> RedFlagAgentOutput:
+        deterministic_findings = self._fallback_findings(parsed_document.text)
+        if deterministic_findings:
+            return RedFlagAgentOutput(
+                metadata=self._metadata(
+                    document_metadata=document_metadata,
+                    analysis_id=analysis_id,
+                    status=AgentOutputStatus.COMPLETED,
+                ),
+                findings=deterministic_findings,
+            )
+
         prompt = build_red_flag_prompt(
             parsed_document=parsed_document,
             document_metadata=document_metadata,
@@ -69,7 +80,7 @@ class RedFlagAgent:
                             )
                         ],
                     ),
-                    findings=self._fallback_findings(parsed_document.text),
+                    findings=deterministic_findings,
                 )
 
         return RedFlagAgentOutput(
@@ -78,7 +89,7 @@ class RedFlagAgent:
                 analysis_id=analysis_id,
                 status=AgentOutputStatus.COMPLETED,
             ),
-            findings=self._fallback_findings(parsed_document.text),
+            findings=deterministic_findings,
         )
 
     def _metadata(
@@ -128,6 +139,7 @@ class RedFlagAgent:
             required_terms=("whatsapp", "message", "chat", "verbal", "sms", "telegram", "mensagem"),
         ))
         findings.extend(self._payment_before_invoice_findings(sentences))
+        findings.extend(self._missing_invoice_before_payment_findings(sentences))
         findings.extend(self._keyword_finding(
             sentences=sentences,
             red_flag_type=RedFlagType.PAYMENT_TO_PERSONAL_OR_THIRD_PARTY_ACCOUNT,
@@ -237,6 +249,42 @@ class RedFlagAgent:
                         )
                     ]
         return []
+
+    def _missing_invoice_before_payment_findings(
+        self,
+        sentences: list[str],
+    ) -> list[RedFlagCandidateFinding]:
+        return self._keyword_finding(
+            sentences=sentences,
+            red_flag_type=RedFlagType.PAYMENT_BEFORE_INVOICE,
+            title="Payment without prior invoice is documented",
+            description=(
+                "The document states that payment was made or processed before an "
+                "invoice was available, attached, or received."
+            ),
+            severity=RedFlagSeverity.HIGH,
+            required_any=(
+                "payment",
+                "paid",
+                "pagamento",
+                "pago",
+                "processed",
+                "processado",
+            ),
+            required_terms=(
+                "without invoice",
+                "no invoice",
+                "invoice was missing",
+                "invoice not received",
+                "before invoice",
+                "sem nota fiscal",
+                "sem invoice",
+                "nota fiscal ausente",
+                "nota fiscal não recebida",
+                "nota fiscal nao recebida",
+                "antes da nota fiscal",
+            ),
+        )
 
     def _keyword_finding(
         self,

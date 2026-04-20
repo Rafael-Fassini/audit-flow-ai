@@ -82,8 +82,8 @@ def test_malformed_agent_provider_outputs_use_controlled_failure_modes() -> None
         filename="memo.txt",
         document_format=DocumentFormat.TXT,
         text=(
-            "Approval was informal via WhatsApp after payment. "
-            "The review control was not performed before posting."
+            "The invoice, contract, and payment support were attached. "
+            "Formal approval was documented before posting."
         ),
     )
     metadata = _metadata()

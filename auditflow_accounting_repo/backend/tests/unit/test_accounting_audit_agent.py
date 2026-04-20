@@ -91,18 +91,13 @@ def test_accounting_audit_agent_rejects_provider_output_with_unsupported_evidenc
             ).model_dump()
 
     output = AccountingAuditAgent(model_provider=UnsupportedEvidenceProvider()).classify(
-        _audit_document(),
+        _provider_document(),
         _metadata(),
     )
 
     assert output.metadata.status == AgentOutputStatus.NEEDS_REVIEW
     assert output.metadata.errors[0].code == "invalid_accounting_audit_model_output"
-    assert output.findings
-    assert all(
-        evidence.text in _audit_document().text
-        for finding in output.findings
-        for evidence in finding.evidence
-    )
+    assert output.findings == []
 
 
 def test_accounting_audit_agent_rejects_unsupported_account_references() -> None:
@@ -119,7 +114,7 @@ def test_accounting_audit_agent_rejects_unsupported_account_references() -> None
                         severity=AccountingAuditSeverity.HIGH,
                         evidence=[
                             AccountingAuditEvidence(
-                                text="Posting to account 4.1.01 - supplier expenses is inconsistent with the freight narrative."
+                                text="Posting to account 4.1.01 - supplier expenses was approved."
                             )
                         ],
                         account_references=["9.9.99 - invented account"],
@@ -128,7 +123,7 @@ def test_accounting_audit_agent_rejects_unsupported_account_references() -> None
             ).model_dump()
 
     output = AccountingAuditAgent(model_provider=UnsupportedAccountProvider()).classify(
-        _audit_document(),
+        _provider_document(),
         _metadata(),
     )
 
@@ -148,11 +143,11 @@ def test_accounting_audit_agent_accepts_valid_provider_json() -> None:
                 id="documentary-gap-1",
                 category=AccountingAuditCategory.DOCUMENTARY_GAP,
                 title="Documentary gap is documented",
-                description="Support is missing.",
+                description="Support was reviewed.",
                 severity=AccountingAuditSeverity.HIGH,
                 evidence=[
                     AccountingAuditEvidence(
-                        text="The accounting rationale is not documented and supporting evidence is missing."
+                        text="The accounting rationale and supporting evidence were reviewed."
                     )
                 ],
             )
@@ -164,12 +159,42 @@ def test_accounting_audit_agent_accepts_valid_provider_json() -> None:
             return expected.model_dump_json()
 
     output = AccountingAuditAgent(model_provider=ValidProvider()).classify(
-        _audit_document(),
+        _provider_document(),
         _metadata(),
     )
 
     assert output.findings == expected.findings
     assert output.metadata.status == AgentOutputStatus.COMPLETED
+
+
+def test_accounting_audit_agent_skips_provider_when_deterministic_checks_fire() -> None:
+    class FailingProvider:
+        def generate(self, prompt):
+            raise AssertionError("provider should not be called")
+
+    output = AccountingAuditAgent(model_provider=FailingProvider()).classify(
+        _audit_document(),
+        _metadata(),
+    )
+
+    assert output.metadata.status == AgentOutputStatus.COMPLETED
+    assert output.findings
+
+
+def test_accounting_audit_agent_detects_invoice_missing_before_payment() -> None:
+    document = ParsedDocument(
+        filename="payment_without_invoice.txt",
+        document_format=DocumentFormat.TXT,
+        text="Payment was processed without invoice support attached.",
+    )
+
+    output = AccountingAuditAgent().classify(document, _metadata())
+
+    assert any(
+        finding.category == AccountingAuditCategory.DOCUMENTARY_GAP
+        and "Invoice missing before payment" in finding.title
+        for finding in output.findings
+    )
 
 
 def test_accounting_audit_output_schema_requires_evidence_and_correct_role() -> None:
@@ -260,5 +285,16 @@ def _audit_document() -> ParsedDocument:
             "Cost center CC-200 Sales does not match the IT services allocation. "
             "Approval was informal via WhatsApp after payment. "
             "Posting to account 4.1.01 - supplier expenses is inconsistent with the freight narrative."
+        ),
+    )
+
+
+def _provider_document() -> ParsedDocument:
+    return ParsedDocument(
+        filename="provider_audit.txt",
+        document_format=DocumentFormat.TXT,
+        text=(
+            "The accounting rationale and supporting evidence were reviewed. "
+            "Posting to account 4.1.01 - supplier expenses was approved."
         ),
     )
