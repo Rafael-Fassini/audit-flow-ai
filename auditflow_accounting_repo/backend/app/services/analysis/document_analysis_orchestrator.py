@@ -1,4 +1,5 @@
 from app.models.report import AnalysisReport
+from app.agents.orchestrator import MultiAgentAnalysisOrchestrator
 from app.repositories.analysis_report_repository import AnalysisReportRepository
 from app.repositories.document_repository import DocumentRepository
 from app.services.chunking.document_chunker import DocumentChunker
@@ -41,6 +42,7 @@ class DocumentAnalysisOrchestrator:
         retrieval_service: KnowledgeRetrievalService,
         risk_inference_service: HybridRiskInferenceService,
         report_builder: AnalysisReportBuilder,
+        agent_orchestrator: MultiAgentAnalysisOrchestrator | None = None,
         report_repository: AnalysisReportRepository | None = None,
     ) -> None:
         self._document_repository = document_repository
@@ -50,6 +52,7 @@ class DocumentAnalysisOrchestrator:
         self._retrieval_service = retrieval_service
         self._risk_inference_service = risk_inference_service
         self._report_builder = report_builder
+        self._agent_orchestrator = agent_orchestrator
         self._report_repository = report_repository
 
     def analyze_document(self, document_id: str) -> AnalysisReport:
@@ -81,6 +84,15 @@ class DocumentAnalysisOrchestrator:
             process=process,
             risk_result=risk_result,
         )
+        if self._agent_orchestrator is not None:
+            try:
+                report = self._agent_orchestrator.enrich_report(
+                    base_report=report,
+                    parsed_document=parsed_document,
+                    document_metadata=document,
+                )
+            except Exception:
+                report = report
 
         if self._report_repository is not None:
             self._report_repository.save(document_id=document.id, report=report)

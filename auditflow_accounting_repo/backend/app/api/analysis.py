@@ -2,6 +2,12 @@ from fastapi import APIRouter, Depends, status
 from fastapi import HTTPException
 from qdrant_client import QdrantClient
 
+from app.agents.accounting_audit import AccountingAuditAgent
+from app.agents.document_understanding import DocumentUnderstandingAgent
+from app.agents.orchestrator import MultiAgentAnalysisOrchestrator
+from app.agents.red_flag import RedFlagAgent
+from app.agents.report import ReportAgent
+from app.agents.reviewer import ReviewerAgent
 from app.core.config import get_settings
 from app.models.report import AnalysisReport
 from app.repositories.analysis_report_repository import JsonAnalysisReportRepository
@@ -68,6 +74,13 @@ async def get_document_analysis_orchestrator() -> DocumentAnalysisOrchestrator:
             llm_provider=NoOpLLMRiskInferenceProvider(),
         ),
         report_builder=AnalysisReportBuilder(scorer=FindingScorer()),
+        agent_orchestrator=MultiAgentAnalysisOrchestrator(
+            document_understanding_agent=DocumentUnderstandingAgent(),
+            red_flag_agent=RedFlagAgent(),
+            accounting_audit_agent=AccountingAuditAgent(),
+            reviewer_agent=ReviewerAgent(),
+            report_agent=ReportAgent(),
+        ),
         report_repository=JsonAnalysisReportRepository(settings.analysis_report_path),
     )
 

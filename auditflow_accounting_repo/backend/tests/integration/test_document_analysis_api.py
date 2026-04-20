@@ -1,6 +1,12 @@
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from app.agents.accounting_audit import AccountingAuditAgent
+from app.agents.document_understanding import DocumentUnderstandingAgent
+from app.agents.orchestrator import MultiAgentAnalysisOrchestrator
+from app.agents.red_flag import RedFlagAgent
+from app.agents.report import ReportAgent
+from app.agents.reviewer import ReviewerAgent
 from app.api.analysis import get_document_analysis_orchestrator
 from app.api.documents import get_document_ingestion_service
 from app.main import create_app
@@ -255,6 +261,86 @@ async def test_analyze_document_deduplicates_repeated_narrative_risks(tmp_path) 
 
 
 @pytest.mark.anyio
+async def test_analyze_document_returns_multi_agent_findings_for_known_memo(tmp_path) -> None:
+    metadata_path = tmp_path / "document_metadata.json"
+    report_path = tmp_path / "analysis_reports.json"
+    document_repository = JsonDocumentRepository(metadata_path)
+    app = create_app()
+
+    async def get_test_ingestion_service() -> DocumentIngestionService:
+        return DocumentIngestionService(
+            storage=LocalInputFileStorage(
+                storage_dir=tmp_path / "uploads",
+                max_size_bytes=4096,
+            ),
+            repository=document_repository,
+        )
+
+    async def get_test_orchestrator() -> DocumentAnalysisOrchestrator:
+        return _build_test_orchestrator(
+            document_repository=document_repository,
+            report_repository=JsonAnalysisReportRepository(report_path),
+            include_agents=True,
+        )
+
+    app.dependency_overrides[get_document_ingestion_service] = get_test_ingestion_service
+    app.dependency_overrides[get_document_analysis_orchestrator] = get_test_orchestrator
+
+    memorandum = (
+        "Accounts Payable Red Flag Memo\n\n"
+        "The accounting team receives the invoice on 2026-03-31. "
+        "The accounting rationale is not documented and supporting evidence is missing. "
+        "The review control was not performed before posting. "
+        "The transaction cannot link to the source invoice, creating a traceability gap. "
+        "The supplier balance is not reconciled at month end. "
+        "Cost center CC-200 Sales does not match the IT services allocation. "
+        "Approval was informal via WhatsApp after payment. "
+        "Posting to account 4.1.01 - supplier expenses is inconsistent with the freight narrative. "
+        "Invoice amount is R$ 1.000,00 but payment amount is R$ 1.500,00. "
+        "No purchase order or contract was provided for the procurement."
+    ).encode("utf-8")
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+        upload_response = await client.post(
+            "/documents/",
+            files={"file": ("ap_red_flag_memo.txt", memorandum, "text/plain")},
+        )
+        document_id = upload_response.json()["id"]
+
+        analysis_response = await client.post(f"/analysis/documents/{document_id}")
+
+    assert analysis_response.status_code == 201
+    payload = analysis_response.json()
+    assert payload["status"] == "completed"
+    assert payload["summary"]["source_filename"] == "ap_red_flag_memo.txt"
+    assert payload["summary"]["total_findings"] == len(payload["findings"])
+    assert payload["summary"]["review_required_count"] >= 1
+    agent_findings = [
+        finding
+        for finding in payload["findings"]
+        if finding["source"] == "multi_agent"
+    ]
+    assert agent_findings
+    categories = {finding["category"] for finding in agent_findings}
+    assert "documentary_gap" in categories
+    assert "control_gap" in categories
+    assert "traceability_gap" in categories
+    assert "reconciliation_gap" in categories
+    assert "cost_center_inconsistency" in categories
+    assert "approval_weakness" in categories
+    assert "posting_inconsistency" in categories
+    assert all(finding["evidence"] for finding in agent_findings)
+    assert all(
+        evidence["source"] == "document"
+        for finding in agent_findings
+        for evidence in finding["evidence"]
+    )
+    assert payload["follow_up_questions"]
+    assert JsonAnalysisReportRepository(report_path).get(payload["analysis_id"]) is not None
+
+
+@pytest.mark.anyio
 async def test_analyze_document_returns_404_for_unknown_document(tmp_path) -> None:
     app = create_app()
 
@@ -282,6 +368,7 @@ async def test_analyze_document_returns_404_for_unknown_document(tmp_path) -> No
 def _build_test_orchestrator(
     document_repository: JsonDocumentRepository,
     report_repository: JsonAnalysisReportRepository,
+    include_agents: bool = False,
 ) -> DocumentAnalysisOrchestrator:
     embedding_provider = DeterministicEmbeddingProvider(vector_size=32)
     vector_store = InMemoryVectorStore()
@@ -308,5 +395,16 @@ def _build_test_orchestrator(
             llm_provider=NoOpLLMRiskInferenceProvider(),
         ),
         report_builder=AnalysisReportBuilder(scorer=FindingScorer()),
+        agent_orchestrator=(
+            MultiAgentAnalysisOrchestrator(
+                document_understanding_agent=DocumentUnderstandingAgent(),
+                red_flag_agent=RedFlagAgent(),
+                accounting_audit_agent=AccountingAuditAgent(),
+                reviewer_agent=ReviewerAgent(),
+                report_agent=ReportAgent(),
+            )
+            if include_agents
+            else None
+        ),
         report_repository=report_repository,
     )
