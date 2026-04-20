@@ -100,11 +100,48 @@ cp ../.env.example ../.env
 uvicorn app.main:app --reload --host 0.0.0.0 --port "${APP_PORT:-8000}"
 ```
 
+The backend resolves `.env` from the repository root even when the command is
+executed from `backend/`. Optional overrides can be placed in `backend/.env`.
+
+For host-local backend execution with Dockerized PostgreSQL and Qdrant, use
+host-mapped service URLs:
+```env
+DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/auditflow
+QDRANT_URL=http://localhost:6333
+```
+
 ## Test execution
 ```bash
 cd backend
 pytest -q
 ```
+
+## Analyze an uploaded document
+Upload a supported document:
+```bash
+curl -i -X POST "http://localhost:${APP_PORT:-8000}/documents/" \
+  -H "X-Request-ID: memo-upload-1" \
+  -F "file=@/path/to/memorandum.pdf;type=application/pdf"
+```
+
+Run the full backend pipeline with the returned document `id`:
+```bash
+curl -i -X POST "http://localhost:${APP_PORT:-8000}/analysis/documents/<document_id>" \
+  -H "X-Request-ID: memo-analysis-1"
+```
+
+The endpoint:
+- loads the stored document metadata and file
+- extracts text when no extracted text is already persisted
+- chunks the parsed text
+- structures the accounting process
+- retrieves knowledge-base context
+- runs hybrid risk inference
+- scores and returns the final `AnalysisReport`
+
+The report is persisted to `ANALYSIS_REPORT_PATH`. The default implementation
+uses the configured Qdrant collection and ensures the minimal curated knowledge
+base is indexed before retrieval.
 
 ## Knowledge base zip import
 Place curated knowledge-base packages under:
@@ -167,6 +204,11 @@ Use `.env` for local development or real environment variables in deployed
 environments. `.env.example` is a template only and is not used by
 `docker-compose.yml` as a runtime env file.
 
+Configuration files are loaded in this order:
+- repository root `.env`
+- optional `backend/.env`
+- real environment variables, which take precedence
+
 Required application variables:
 - `DATABASE_URL`
 - `QDRANT_URL`
@@ -184,6 +226,7 @@ Optional variables with defaults:
 - `APP_PORT`
 - `UPLOAD_STORAGE_DIR`
 - `DOCUMENT_METADATA_PATH`
+- `ANALYSIS_REPORT_PATH`
 - `MAX_UPLOAD_SIZE_BYTES`
 - `KNOWLEDGE_COLLECTION_NAME`
 - `EMBEDDING_VECTOR_SIZE`

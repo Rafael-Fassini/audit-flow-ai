@@ -3,10 +3,11 @@ from app.models.accounting_process import (
     AccountReferenceRole,
     AccountingProcess,
     EvidenceSnippet,
+    NarrativeGap,
     ProcessStep,
     ProcessStepType,
 )
-from app.models.risk import InconsistencyType, RiskCategory
+from app.models.risk import FindingSeverity, InconsistencyType, RiskCategory
 from app.services.risk_engine.rules import AccountingRiskRules
 
 
@@ -80,3 +81,40 @@ def test_rules_do_not_flag_missing_support_when_rationale_is_present() -> None:
 
     assert all(finding.id != "heuristic-missing-support" for finding in result.inconsistencies)
     assert all(finding.id != "heuristic-missing-control" for finding in result.inconsistencies)
+
+
+def test_rules_convert_operational_narrative_gaps_to_findings() -> None:
+    process = AccountingProcess(
+        process_name="Memorando Walkthrough Corretora",
+        summary="Operational walkthrough with identified limitations.",
+        source_filename="memorando.txt",
+        narrative_gaps=[
+            NarrativeGap(
+                description=(
+                    "Há limitação de rastreabilidade e dependência de terceiros "
+                    "para confirmar informações críticas."
+                ),
+                evidence=EvidenceSnippet(
+                    section_index=1,
+                    chunk_index=2,
+                    text="limitação de rastreabilidade e dependência de terceiros",
+                ),
+            )
+        ],
+    )
+
+    result = AccountingRiskRules().evaluate(process)
+
+    assert any(
+        finding.title == "Narrative indicates traceability limitations"
+        for finding in result.inconsistencies
+    )
+    assert any(
+        finding.type == InconsistencyType.TRACEABILITY_GAP
+        for finding in result.inconsistencies
+    )
+    assert any(
+        finding.severity_hint == FindingSeverity.MEDIUM
+        for finding in result.inconsistencies
+    )
+    assert any(risk.category == RiskCategory.WEAK_CONTROL for risk in result.risks)

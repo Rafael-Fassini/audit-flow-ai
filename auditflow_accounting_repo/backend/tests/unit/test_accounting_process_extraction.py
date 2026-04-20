@@ -53,6 +53,44 @@ def test_extractor_structures_accounting_entry_process() -> None:
     assert process.narrative_gaps
 
 
+def test_extractor_uses_operational_narrative_sections() -> None:
+    chunked = DocumentChunker(max_chunk_chars=500).chunk(
+        ParsedDocument(
+            filename="memorando_walkthrough_corretora.txt",
+            document_format=DocumentFormat.TXT,
+            text=(
+                "Memorando Walkthrough Corretora\n\n"
+                "Fluxo operacional\n\n"
+                "1. A corretora recebe a solicitação operacional do cliente.\n"
+                "2. O backoffice valida as informações recebidas de terceiros.\n"
+                "3. A contabilidade registra o lançamento contábil no fechamento.\n\n"
+                "Riscos Identificados\n\n"
+                "Há limitação de rastreabilidade entre a solicitação original e o "
+                "registro final. Existe dependência de terceiros para confirmar "
+                "informações críticas.\n\n"
+                "Controles Internos Observados\n\n"
+                "O backoffice revisa as informações antes do fechamento.\n\n"
+                "Limitações\n\n"
+                "Não foi identificada referência ao plano de contas."
+            ),
+        )
+    )
+
+    process = AccountingProcessExtractor().extract(chunked)
+
+    assert process.process_name == "Processo operacional e contábil de corretora"
+    assert len(process.steps) >= 3
+    assert all(len(step.description.split()) >= 5 for step in process.steps)
+    assert any("Responsible party:" in step.description for step in process.steps)
+    assert any("Corretora" in step.actors for step in process.steps)
+    assert process.controls
+    assert any("rastreabilidade" in gap.description.lower() for gap in process.narrative_gaps)
+    assert any(
+        "Account references were not identified" in gap.description
+        for gap in process.narrative_gaps
+    )
+
+
 def test_accounting_process_repository_persists_process_contract(tmp_path: Path) -> None:
     chunked = DocumentChunker(max_chunk_chars=500).chunk(
         ParsedDocument(

@@ -7,23 +7,53 @@
     "steps": [
       {
         "index": 0,
+        "step_type": "posting",
         "description": "Operations sends a posting request to accounting.",
         "actors": ["Operations"],
         "systems": ["ERP"],
-        "controls": ["Manager approval by email"],
-        "accounts": [
-          {
-            "code": "1.1.9.99",
-            "name": "Suspense account",
-            "account_type": "asset",
-            "usage_context": "Temporary posting until supporting documents arrive"
-          }
-        ],
-        "posting_logic": "Debit suspense account and clear after documentation review.",
-        "source_section": "Walkthrough"
+        "evidence": {
+          "section_index": 0,
+          "chunk_index": 0,
+          "text": "Operations sends a posting request to accounting."
+        }
       }
     ],
-    "gaps": ["No closure deadline is documented."]
+    "account_references": [
+      {
+        "role": "debit",
+        "account_code": "1.1.9.99",
+        "account_name": "Suspense account",
+        "evidence": {
+          "section_index": 0,
+          "chunk_index": 0,
+          "text": "Temporary posting until supporting documents arrive."
+        }
+      }
+    ],
+    "controls": [
+      {
+        "description": "Manager approval by email",
+        "owner": "Accounting manager",
+        "evidence": {
+          "section_index": 0,
+          "chunk_index": 0,
+          "text": "Manager approval by email."
+        }
+      }
+    ],
+    "posting_logic": [
+      "Debit suspense account and clear after documentation review."
+    ],
+    "narrative_gaps": [
+      {
+        "description": "No closure deadline is documented.",
+        "evidence": {
+          "section_index": 0,
+          "chunk_index": 0,
+          "text": "The memorandum does not define a closure deadline."
+        }
+      }
+    ]
   },
   "risk_result": {
     "inconsistencies": [

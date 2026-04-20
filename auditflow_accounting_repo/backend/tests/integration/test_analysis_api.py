@@ -1,7 +1,12 @@
+import json
+from pathlib import Path
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.main import create_app
+
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 
 @pytest.mark.anyio
@@ -61,3 +66,23 @@ async def test_analysis_report_endpoint_returns_stable_payload() -> None:
     assert payload["findings"][0]["score"]["severity"] == "medium"
     assert payload["evidence"][0]["text"] == "suspense account entry"
     assert payload["follow_up_questions"][0]["id"] == "q-1"
+
+
+@pytest.mark.anyio
+async def test_analysis_report_example_payload_is_valid() -> None:
+    app = create_app()
+    transport = ASGITransport(app=app)
+    example_path = PROJECT_ROOT / "docs/examples/analysis_report_request.json"
+    example_payload = json.loads(example_path.read_text(encoding="utf-8"))
+
+    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+        response = await client.post(
+            "/analysis/reports",
+            json=example_payload,
+            headers={"X-Request-ID": "analysis-example-test"},
+        )
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["analysis_id"] == "analysis-example-1"
+    assert payload["summary"]["total_findings"] == 1

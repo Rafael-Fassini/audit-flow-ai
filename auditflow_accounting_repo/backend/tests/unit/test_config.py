@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from app.core.config import Settings, get_settings
+from app.core.config import ENV_FILES, PROJECT_ROOT, Settings, get_settings
 
 
 def test_settings_reads_required_environment_values(monkeypatch) -> None:
@@ -34,6 +34,7 @@ def test_settings_keeps_allowed_non_sensitive_defaults(monkeypatch) -> None:
     assert settings.app_env == "development"
     assert settings.app_port == 8000
     assert str(settings.document_metadata_path) == "storage/document_metadata.json"
+    assert str(settings.analysis_report_path) == "storage/analysis_reports.json"
     assert settings.embedding_vector_size == 64
     assert settings.retrieval_top_k == 5
 
@@ -67,3 +68,9 @@ def test_get_settings_uses_central_cached_settings(monkeypatch) -> None:
     assert first is second
     assert first.openai_model == "gpt-test"
     get_settings.cache_clear()
+
+
+def test_default_env_files_include_project_root_env() -> None:
+    assert ENV_FILES[0] == PROJECT_ROOT / ".env"
+    assert ENV_FILES[1].name == ".env"
+    assert ENV_FILES[1].parent.name == "backend"

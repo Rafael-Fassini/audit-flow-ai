@@ -56,7 +56,11 @@ class AnalysisReportBuilder:
         risk_result: RiskInferenceResult,
     ) -> list[ReportFinding]:
         findings: list[ReportFinding] = []
+        inconsistency_ids: set[str] = set()
+        inconsistency_titles: set[str] = set()
         for inconsistency in risk_result.inconsistencies:
+            inconsistency_ids.add(inconsistency.id)
+            inconsistency_titles.add(inconsistency.title.lower())
             findings.append(
                 ReportFinding(
                     id=inconsistency.id,
@@ -71,6 +75,15 @@ class AnalysisReportBuilder:
             )
 
         for risk in risk_result.risks:
+            if (
+                risk.related_inconsistency_ids
+                and any(
+                    related_id in inconsistency_ids
+                    for related_id in risk.related_inconsistency_ids
+                )
+                and risk.title.lower() in inconsistency_titles
+            ):
+                continue
             findings.append(
                 ReportFinding(
                     id=risk.id,

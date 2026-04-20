@@ -54,6 +54,9 @@ Copy `.env.example` to `.env` and fill the required values. `.env.example` is
 only a template; the application and Docker Compose should run from `.env` or
 real environment variables.
 
+The backend loads `.env` from the repository root even when commands are run
+from `backend/`. A `backend/.env` file may also be used for local overrides.
+
 Required application variables:
 - `DATABASE_URL`
 - `QDRANT_URL`
@@ -83,6 +86,11 @@ cp ../.env.example ../.env
 uvicorn app.main:app --reload --host 0.0.0.0 --port "${APP_PORT:-8000}"
 ```
 
+When running the backend directly on the host while PostgreSQL and Qdrant run
+through Docker, use host-mapped URLs in `.env`, for example
+`DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/auditflow`
+and `QDRANT_URL=http://localhost:6333`.
+
 ## Run tests
 From `backend/`:
 ```bash
@@ -98,6 +106,7 @@ http://localhost:${APP_PORT:-8000}/docs
 Main endpoints:
 - `GET /health`
 - `POST /documents/`
+- `POST /analysis/documents/{document_id}`
 - `POST /analysis/reports`
 
 All responses include an `X-Request-ID` header. Pass your own
@@ -106,6 +115,23 @@ All responses include an `X-Request-ID` header. Pass your own
 Example requests:
 - `docs/examples/document_upload.md`
 - `docs/examples/analysis_report_request.json`
+
+## Analyze an uploaded document
+Upload a PDF, DOCX, or TXT file:
+```bash
+curl -i -X POST "http://localhost:${APP_PORT:-8000}/documents/" \
+  -F "file=@/path/to/memorandum.pdf;type=application/pdf"
+```
+
+Use the returned `id` to run the end-to-end backend pipeline:
+```bash
+curl -i -X POST "http://localhost:${APP_PORT:-8000}/analysis/documents/<document_id>" \
+  -H "X-Request-ID: memo-analysis-1"
+```
+
+The response is an `AnalysisReport` JSON payload containing the structured
+process, findings, evidence, follow-up questions, severity, confidence, and
+review flags. Reports are also persisted to `ANALYSIS_REPORT_PATH`.
 
 ## Documentation
 - Architecture: `docs/ARCHITECTURE.md`

@@ -22,6 +22,9 @@ class InconsistencyType(str, Enum):
     POSTING_LOGIC = "posting_logic"
     DOCUMENTARY_GAP = "documentary_gap"
     CONTROL_GAP = "control_gap"
+    RECONCILIATION_GAP = "reconciliation_gap"
+    TRACEABILITY_GAP = "traceability_gap"
+    THIRD_PARTY_DEPENDENCY = "third_party_dependency"
     CLASSIFICATION = "classification"
 
 

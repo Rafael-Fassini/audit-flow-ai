@@ -151,4 +151,26 @@ class DocumentChunker:
             return False
         if block.endswith("."):
             return False
-        return block.endswith(":") or block.isupper()
+        normalized = block.strip().lower()
+        known_headings = (
+            "riscos identificados",
+            "controles internos observados",
+            "controles observados",
+            "limitações",
+            "limitacoes",
+            "conclusão",
+            "conclusao",
+            "objetivo",
+            "escopo",
+            "procedimentos executados",
+            "operational risks",
+            "identified risks",
+            "internal controls observed",
+            "limitations",
+            "conclusion",
+        )
+        return (
+            block.endswith(":")
+            or block.isupper()
+            or any(heading in normalized for heading in known_headings)
+        )
