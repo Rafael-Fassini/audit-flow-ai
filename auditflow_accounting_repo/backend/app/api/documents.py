@@ -4,7 +4,7 @@ from email.policy import default
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
-from app.core.config import settings
+from app.core.config import get_settings
 from app.models.document import DocumentMetadata
 from app.repositories.document_repository import JsonDocumentRepository
 from app.schemas.document import DocumentUploadResponse
@@ -27,6 +27,7 @@ class UploadedDocument:
 
 
 async def get_document_ingestion_service() -> DocumentIngestionService:
+    settings = get_settings()
     storage = LocalInputFileStorage(
         storage_dir=settings.upload_storage_dir,
         max_size_bytes=settings.max_upload_size_bytes,

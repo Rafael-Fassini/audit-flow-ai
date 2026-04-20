@@ -17,7 +17,15 @@ async def test_healthcheck_returns_ok() -> None:
 
 
 def test_settings_accept_environment_overrides() -> None:
-    settings = Settings(app_name="AuditFlow Test", app_env="test", app_port=9000)
+    settings = Settings(
+        app_name="AuditFlow Test",
+        app_env="test",
+        app_port=9000,
+        database_url="postgresql+psycopg://user:pass@db:5432/app",
+        qdrant_url="http://qdrant:6333",
+        openai_api_key="secret",
+        openai_model="gpt-test",
+    )
 
     assert settings.app_name == "AuditFlow Test"
     assert settings.app_env == "test"

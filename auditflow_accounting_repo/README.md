@@ -44,17 +44,31 @@ See `docs/ARCHITECTURE.md` for the full technical view.
 - Docker Compose
 
 ## Local ports
-- Backend API: `8000`
-- PostgreSQL: `5432`
-- Qdrant HTTP: `6333`
-- Qdrant gRPC: `6334`
+- Backend API: `APP_PORT`, default `8000`
+- PostgreSQL: `POSTGRES_PORT`, default `5432`
+- Qdrant HTTP: `QDRANT_HTTP_PORT`, default `6333`
+- Qdrant gRPC: `QDRANT_GRPC_PORT`, default `6334`
 
 ## Environment setup
-Copy `.env.example` to `.env` and fill the required values.
+Copy `.env.example` to `.env` and fill the required values. `.env.example` is
+only a template; the application and Docker Compose should run from `.env` or
+real environment variables.
+
+Required application variables:
+- `DATABASE_URL`
+- `QDRANT_URL`
+- `OPENAI_API_KEY`
+- `OPENAI_MODEL`
+
+Required Docker Compose service variables:
+- `POSTGRES_DB`
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD`
 
 ## Run with Docker
 ```bash
 cp .env.example .env
+# edit .env and set required secrets/URLs
 docker compose up --build
 ```
 
@@ -64,7 +78,9 @@ cd backend
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+cp ../.env.example ../.env
+# edit ../.env and set required secrets/URLs
+uvicorn app.main:app --reload --host 0.0.0.0 --port "${APP_PORT:-8000}"
 ```
 
 ## Run tests

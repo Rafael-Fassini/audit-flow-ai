@@ -8,7 +8,7 @@ from qdrant_client import QdrantClient
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from app.core.config import settings
+from app.core.config import get_settings
 from app.services.chunking.document_chunker import DocumentChunker
 from app.services.parsing.document_parser import DocumentParser
 from app.services.retrieval.embeddings import DeterministicEmbeddingProvider
@@ -21,6 +21,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Import a knowledge-base zip.")
     parser.add_argument("archive_path", type=Path)
     args = parser.parse_args()
+    settings = get_settings()
 
     qdrant_client = QdrantClient(url=settings.qdrant_url)
     embedding_provider = DeterministicEmbeddingProvider(

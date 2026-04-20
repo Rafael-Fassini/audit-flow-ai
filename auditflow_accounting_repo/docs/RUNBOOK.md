@@ -8,18 +8,19 @@
 ## Start with Docker
 ```bash
 cp .env.example .env
+# edit .env and set required secrets/URLs
 docker compose up --build
 ```
 
 ## Check health
 API:
 ```bash
-curl http://localhost:8000/health
+curl "http://localhost:${APP_PORT:-8000}/health"
 ```
 
 Qdrant:
 ```bash
-curl http://localhost:6333/collections
+curl "http://localhost:${QDRANT_HTTP_PORT:-6333}/collections"
 ```
 
 ## Local backend run
@@ -28,7 +29,9 @@ cd backend
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+cp ../.env.example ../.env
+# edit ../.env and set required secrets/URLs
+uvicorn app.main:app --reload --host 0.0.0.0 --port "${APP_PORT:-8000}"
 ```
 
 ## Test execution
@@ -93,14 +96,35 @@ retrieval_service.retrieve_for_query(
 ```
 
 ## Environment variables
-Required:
-- `APP_NAME`
-- `APP_ENV`
-- `APP_PORT`
+Configuration is loaded only through `app.core.config.get_settings()`.
+Use `.env` for local development or real environment variables in deployed
+environments. `.env.example` is a template only and is not used by
+`docker-compose.yml` as a runtime env file.
+
+Required application variables:
 - `DATABASE_URL`
 - `QDRANT_URL`
 - `OPENAI_API_KEY`
 - `OPENAI_MODEL`
+
+Required Docker Compose service variables:
+- `POSTGRES_DB`
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD`
+
+Optional variables with defaults:
+- `APP_NAME`
+- `APP_ENV`
+- `APP_PORT`
+- `UPLOAD_STORAGE_DIR`
+- `DOCUMENT_METADATA_PATH`
+- `MAX_UPLOAD_SIZE_BYTES`
+- `KNOWLEDGE_COLLECTION_NAME`
+- `EMBEDDING_VECTOR_SIZE`
+- `RETRIEVAL_TOP_K`
+- `POSTGRES_PORT`
+- `QDRANT_HTTP_PORT`
+- `QDRANT_GRPC_PORT`
 
 ## Troubleshooting
 ### Backend cannot connect to PostgreSQL
