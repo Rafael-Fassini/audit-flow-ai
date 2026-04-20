@@ -19,6 +19,7 @@ class AgentRole(str, Enum):
     DOCUMENT_PARSER = "document_parser"
     DOCUMENT_CHUNKER = "document_chunker"
     DOCUMENT_UNDERSTANDING = "document_understanding"
+    RED_FLAG = "red_flag"
     PROCESS_STRUCTURER = "process_structurer"
     KNOWLEDGE_RETRIEVER = "knowledge_retriever"
     RISK_INFERENCE = "risk_inference"
@@ -114,6 +115,59 @@ class DocumentUnderstandingAgentInput(BaseModel):
 class DocumentUnderstandingAgentOutput(BaseModel):
     metadata: AgentOutputMetadata
     understanding: DocumentUnderstandingResult
+
+
+class RedFlagType(str, Enum):
+    IMPOSSIBLE_DATE = "impossible_date"
+    CONFLICTING_VALUES = "conflicting_values"
+    MISSING_PROCUREMENT_ARTIFACTS = "missing_procurement_artifacts"
+    INFORMAL_APPROVAL = "informal_approval"
+    PAYMENT_BEFORE_INVOICE = "payment_before_invoice"
+    PAYMENT_TO_PERSONAL_OR_THIRD_PARTY_ACCOUNT = (
+        "payment_to_personal_or_third_party_account"
+    )
+    INFORMAL_PAYMENT_INSTRUCTIONS = "informal_payment_instructions"
+    URGENCY_OVERRIDE_WITHOUT_SUPPORT = "urgency_override_without_support"
+
+
+class RedFlagSeverity(str, Enum):
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
+class RedFlagEvidence(BaseModel):
+    text: str = Field(min_length=1)
+    source: Literal["document"] = "document"
+
+
+class RedFlagCandidateFinding(BaseModel):
+    id: str = Field(min_length=1)
+    red_flag_type: RedFlagType
+    title: str = Field(min_length=1)
+    description: str = Field(min_length=1)
+    severity: RedFlagSeverity
+    evidence: list[RedFlagEvidence] = Field(min_length=1)
+
+
+class RedFlagAgentInput(BaseModel):
+    parsed_document: ParsedDocument
+    document_metadata: DocumentMetadata
+    understanding: DocumentUnderstandingResult | None = None
+    analysis_id: str | None = None
+
+
+class RedFlagAgentOutput(BaseModel):
+    metadata: AgentOutputMetadata
+    findings: list[RedFlagCandidateFinding] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_red_flag_output(self) -> "RedFlagAgentOutput":
+        if self.metadata.agent_role != AgentRole.RED_FLAG:
+            raise ValueError("red flag output metadata must use red_flag agent role")
+        finding_ids = [finding.id for finding in self.findings]
+        if len(finding_ids) != len(set(finding_ids)):
+            raise ValueError("red flag finding ids must be unique")
+        return self
 
 
 class ProcessStructurerAgentOutput(BaseModel):
