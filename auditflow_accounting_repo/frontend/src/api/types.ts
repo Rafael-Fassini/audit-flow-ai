@@ -82,11 +82,42 @@ export type AnalysisSummary = {
   review_required_count: number;
 };
 
+export type ScopedConclusionEvidence = {
+  finding_id: string;
+  title: string;
+  category: string;
+  evidence_text: string;
+};
+
+export type ScopedQuestionAnswer = {
+  question: string;
+  conclusion: string;
+  rationale: string;
+  top_findings: ScopedConclusionEvidence[];
+};
+
+export type FinalResponseFinding = {
+  title: string;
+  category: string;
+  severity: string;
+  evidence: string;
+};
+
+export type FinalResponse = {
+  conclusion: string;
+  top_findings: FinalResponseFinding[];
+  missing_items: string[];
+  normative_rationale: string;
+  recommended_action: string;
+};
+
 export type AnalysisReport = {
   analysis_id: string;
   status: string;
   generated_at: string;
   summary: AnalysisSummary;
+  scoped_answer?: ScopedQuestionAnswer;
+  final_response?: FinalResponse;
   process: AccountingProcess;
   findings: ReportFinding[];
   evidence: FindingEvidence[];

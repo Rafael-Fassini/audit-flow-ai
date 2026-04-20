@@ -4,6 +4,7 @@ import { analyzeDocument, checkHealth, uploadDocument } from "./api/client";
 import type {
   AnalysisReport,
   DocumentUploadResponse,
+  FinalResponse,
   FindingEvidence,
   ReportFinding,
 } from "./api/types";
@@ -34,14 +35,7 @@ export default function App() {
     [documents, selectedDocumentId],
   );
   const currentReport = selectedDocumentId ? reports[selectedDocumentId] ?? null : null;
-
-  const mainFindings = currentReport
-    ? currentReport.findings.filter((finding) => finding.category !== "documentary_gap")
-    : [];
-  const documentaryFindings = currentReport
-    ? currentReport.findings.filter((finding) => finding.category === "documentary_gap")
-    : [];
-  const evidenceItems = currentReport ? collectEvidence(currentReport) : [];
+  const finalResponse = currentReport ? getFinalResponse(currentReport) : null;
 
   useEffect(() => {
     checkHealth().then(setApiHealthy).catch(() => setApiHealthy(false));
@@ -66,7 +60,10 @@ export default function App() {
 
     try {
       const document = await uploadDocument(selectedFile);
-      setDocuments((current) => [document, ...current.filter((item) => item.id !== document.id)]);
+      setDocuments((current) => [
+        document,
+        ...current.filter((item) => item.id !== document.id),
+      ]);
       setSelectedDocumentId(document.id);
       setSelectedFile(null);
       setMessage(`Document uploaded: ${document.filename}`);
@@ -98,95 +95,102 @@ export default function App() {
   const isAnalyzing = requestState === "analyzing";
 
   return (
-    <main className="page-shell">
+    <SinglePageLayout>
       <Header apiHealthy={apiHealthy} />
 
       {message ? <div className="message success">{message}</div> : null}
       {errorMessage ? <div className="message error">{errorMessage}</div> : null}
 
-      <section className="card upload-card" aria-labelledby="upload-title">
-        <div>
-          <p className="eyebrow">Upload Document</p>
-          <h2 id="upload-title">Select a PDF, DOCX, or TXT file</h2>
-          <p className="muted">The backend stores the document before analysis is triggered.</p>
-        </div>
-        <label className="file-input">
-          <input
-            accept=".pdf,.docx,.txt,application/pdf,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
-            type="file"
-          />
-          <span>{selectedFile ? selectedFile.name : "Choose file"}</span>
-        </label>
-        <button
-          className="primary-button"
-          disabled={!selectedFile || isUploading}
-          onClick={() => void handleUpload()}
-          type="button"
-        >
-          {isUploading ? "Uploading..." : "Upload"}
-        </button>
-      </section>
+      <UploadSection
+        isUploading={isUploading}
+        onFileChange={setSelectedFile}
+        onUpload={() => void handleUpload()}
+        selectedFile={selectedFile}
+      />
 
-      <section className="card" aria-labelledby="documents-title">
-        <div className="section-title">
-          <div>
-            <p className="eyebrow">Documents</p>
-            <h2 id="documents-title">Uploaded in this browser</h2>
-          </div>
-          <span className="note">No backend list endpoint exists yet.</span>
-        </div>
-        <DocumentsTable
-          documents={documents}
-          isAnalyzing={isAnalyzing}
-          onAnalyze={(document) => void handleAnalyze(document)}
-          onSelect={setSelectedDocumentId}
-          selectedDocumentId={selectedDocumentId}
-        />
-      </section>
+      <DocumentsSection
+        documents={documents}
+        isAnalyzing={isAnalyzing}
+        onAnalyze={(document) => void handleAnalyze(document)}
+        onSelect={setSelectedDocumentId}
+        selectedDocumentId={selectedDocumentId}
+      />
 
-      <AnalysisSummary report={currentReport} selectedDocument={selectedDocument} />
-
-      <section className="card" aria-labelledby="overview-title">
-        <p className="eyebrow">Overview</p>
-        <h2 id="overview-title">Process summary</h2>
-        <p className="body-text">
-          {currentReport?.process.summary ??
-            "Run an analysis to see the backend-generated process summary."}
-        </p>
-      </section>
-
-      <FindingsSection findings={mainFindings} />
-      <MissingItemsSection findings={documentaryFindings} report={currentReport} />
-      <FollowUpSection report={currentReport} />
-      <EvidenceSection evidence={evidenceItems} />
-      <ProcessStepsSection report={currentReport} />
-    </main>
+      <AnalysisResultCard
+        document={selectedDocument}
+        finalResponse={finalResponse}
+        report={currentReport}
+      />
+    </SinglePageLayout>
   );
+}
+
+function SinglePageLayout({ children }: { children: React.ReactNode }) {
+  return <main className="single-page-layout">{children}</main>;
 }
 
 function Header({ apiHealthy }: { apiHealthy: boolean | null }) {
   return (
     <header className="app-header">
-      <div className="header-title">
-        <img
-          src="https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&w=128&q=80"
-          alt=""
-        />
-        <div>
-          <p className="product-name">AuditFlow</p>
-          <h1>Document Analysis</h1>
-        </div>
+      <div>
+        <p className="product-name">AuditFlow</p>
+        <h1>Scoped document review</h1>
+        <p className="header-copy">
+          A focused check for documentation, approval, value, classification, and
+          scoped normative inconsistencies.
+        </p>
       </div>
       <div className="api-status">
         <span className={apiHealthy ? "status-dot ok" : "status-dot"} />
-        {apiHealthy === null ? "Checking backend" : apiHealthy ? "Backend online" : "Backend unavailable"}
+        {apiHealthy === null
+          ? "Checking backend"
+          : apiHealthy
+            ? "Backend online"
+            : "Backend unavailable"}
       </div>
     </header>
   );
 }
 
-function DocumentsTable({
+function UploadSection({
+  isUploading,
+  onFileChange,
+  onUpload,
+  selectedFile,
+}: {
+  isUploading: boolean;
+  onFileChange: (file: File | null) => void;
+  onUpload: () => void;
+  selectedFile: File | null;
+}) {
+  return (
+    <section className="panel upload-section" aria-labelledby="upload-title">
+      <div>
+        <p className="eyebrow">1. Upload</p>
+        <h2 id="upload-title">Add a support document</h2>
+        <p className="muted">PDF, DOCX, or TXT. The file is stored before analysis.</p>
+      </div>
+      <label className="file-input">
+        <input
+          accept=".pdf,.docx,.txt,application/pdf,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          onChange={(event) => onFileChange(event.target.files?.[0] ?? null)}
+          type="file"
+        />
+        <span>{selectedFile ? selectedFile.name : "Choose file"}</span>
+      </label>
+      <button
+        className="primary-button"
+        disabled={!selectedFile || isUploading}
+        onClick={onUpload}
+        type="button"
+      >
+        {isUploading ? "Uploading..." : "Upload"}
+      </button>
+    </section>
+  );
+}
+
+function DocumentsSection({
   documents,
   selectedDocumentId,
   isAnalyzing,
@@ -199,205 +203,271 @@ function DocumentsTable({
   onAnalyze: (document: DocumentUploadResponse) => void;
   onSelect: (documentId: string) => void;
 }) {
-  if (!documents.length) {
-    return <p className="empty-text">No documents uploaded in this browser session.</p>;
-  }
-
   return (
-    <div className="documents-list">
-      {documents.map((document) => (
-        <article
-          className={document.id === selectedDocumentId ? "document-item active" : "document-item"}
-          key={document.id}
-        >
-          <button className="document-main" onClick={() => onSelect(document.id)} type="button">
-            <strong>{document.filename}</strong>
-            <span>{document.id}</span>
-          </button>
-          <span className="status-badge">{document.status}</span>
-          <button
-            className="secondary-button"
-            disabled={isAnalyzing}
-            onClick={() => onAnalyze(document)}
-            type="button"
-          >
-            {isAnalyzing && document.id === selectedDocumentId ? "Analyzing..." : "Analyze"}
-          </button>
-        </article>
-      ))}
-    </div>
-  );
-}
-
-function AnalysisSummary({
-  report,
-  selectedDocument,
-}: {
-  report: AnalysisReport | null;
-  selectedDocument: DocumentUploadResponse | null;
-}) {
-  return (
-    <section className="card summary-card" aria-labelledby="summary-title">
-      <div>
-        <p className="eyebrow">Analysis Summary</p>
-        <h2 id="summary-title">{report?.summary.process_name ?? "No analysis yet"}</h2>
-        <p className="muted">{report?.summary.source_filename ?? selectedDocument?.filename ?? "Select a document."}</p>
+    <section className="panel" aria-labelledby="documents-title">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">2. Documents</p>
+          <h2 id="documents-title">Uploaded in this browser</h2>
+        </div>
+        <span className="quiet-note">Session list</span>
       </div>
-      <div className="summary-meta">
-        <Metric label="Status" value={report?.status ?? "not started"} />
-        <Metric label="Analysis ID" value={report?.analysis_id ?? "-"} />
-        <Metric label="Total findings" value={String(report?.summary.total_findings ?? 0)} />
-        <Metric label="Review required" value={String(report?.summary.review_required_count ?? 0)} />
-      </div>
-    </section>
-  );
-}
 
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="metric">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  );
-}
-
-function FindingsSection({ findings }: { findings: ReportFinding[] }) {
-  return (
-    <section className="card" aria-labelledby="findings-title">
-      <p className="eyebrow">Findings</p>
-      <h2 id="findings-title">Operational and control findings</h2>
-      {findings.length ? (
-        <div className="findings-grid">
-          {findings.map((finding) => (
-            <article className="finding-card" key={finding.id}>
-              <div className="finding-tags">
-                <span className={`severity ${finding.score.severity}`}>{finding.score.severity}</span>
-                <span>{formatLabel(finding.category)}</span>
-              </div>
-              <h3>{finding.title}</h3>
-              <p>{finding.description}</p>
-              <div className="confidence">
-                Confidence: {Math.round(finding.score.confidence * 100)}%
-              </div>
-              <EvidencePreview evidence={finding.evidence[0]} />
+      {documents.length ? (
+        <div className="documents-list">
+          {documents.map((document) => (
+            <article
+              className={
+                document.id === selectedDocumentId
+                  ? "document-item active"
+                  : "document-item"
+              }
+              key={document.id}
+            >
+              <button
+                className="document-main"
+                onClick={() => onSelect(document.id)}
+                type="button"
+              >
+                <strong>{document.filename}</strong>
+                <span>{formatBytes(document.size_bytes)} · {document.status}</span>
+              </button>
+              <button
+                className="secondary-button"
+                disabled={isAnalyzing}
+                onClick={() => onAnalyze(document)}
+                type="button"
+              >
+                {isAnalyzing && document.id === selectedDocumentId
+                  ? "Analyzing..."
+                  : "Analyze"}
+              </button>
             </article>
           ))}
         </div>
       ) : (
-        <p className="empty-text">No operational findings returned yet.</p>
+        <p className="empty-text">Upload a document to start.</p>
       )}
     </section>
   );
 }
 
-function MissingItemsSection({
-  findings,
+function AnalysisResultCard({
+  document,
+  finalResponse,
   report,
 }: {
-  findings: ReportFinding[];
+  document: DocumentUploadResponse | null;
+  finalResponse: FinalResponse | null;
   report: AnalysisReport | null;
 }) {
-  const gapDescriptions = report?.process.narrative_gaps
-    .filter((gap) => /not identified|not found|não foi identificada|nao foi identificada/i.test(gap.description))
-    .map((gap) => gap.description) ?? [];
-
-  return (
-    <section className="card" aria-labelledby="missing-title">
-      <p className="eyebrow">Missing Items</p>
-      <h2 id="missing-title">Documentary gaps</h2>
-      {findings.length || gapDescriptions.length ? (
-        <ul className="simple-list">
-          {findings.map((finding) => (
-            <li key={finding.id}>
-              <strong>{finding.title}</strong>
-              <span>{finding.description}</span>
-            </li>
-          ))}
-          {gapDescriptions.map((description) => (
-            <li key={description}>
-              <strong>Missing document detail</strong>
-              <span>{description}</span>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="empty-text">No documentary gaps returned yet.</p>
-      )}
-    </section>
-  );
-}
-
-function FollowUpSection({ report }: { report: AnalysisReport | null }) {
-  return (
-    <section className="card" aria-labelledby="questions-title">
-      <p className="eyebrow">Follow-up Questions</p>
-      <h2 id="questions-title">Suggested audit questions</h2>
-      {report?.follow_up_questions.length ? (
-        <ul className="question-list">
-          {report.follow_up_questions.map((question) => (
-            <li key={question.id}>{question.question}</li>
-          ))}
-        </ul>
-      ) : (
-        <p className="empty-text">No follow-up questions returned yet.</p>
-      )}
-    </section>
-  );
-}
-
-function EvidenceSection({ evidence }: { evidence: FindingEvidence[] }) {
-  return (
-    <section className="card" aria-labelledby="evidence-title">
-      <p className="eyebrow">Evidence</p>
-      <h2 id="evidence-title">Referenced excerpts</h2>
-      {evidence.length ? (
-        <ul className="evidence-list">
-          {evidence.map((item, index) => (
-            <li key={`${item.source}-${item.text}-${index}`}>
-              <strong>{formatLabel(item.source)}</strong>
-              <span>{item.text}</span>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="empty-text">No evidence excerpts returned yet.</p>
-      )}
-    </section>
-  );
-}
-
-function ProcessStepsSection({ report }: { report: AnalysisReport | null }) {
-  return (
-    <section className="card" aria-labelledby="steps-title">
-      <p className="eyebrow">Process Steps</p>
-      <h2 id="steps-title">Extracted operational flow</h2>
-      {report?.process.steps.length ? (
-        <ol className="steps-list">
-          {report.process.steps.map((step) => (
-            <li key={`${step.index}-${step.description}`}>
-              <strong>{formatLabel(step.step_type)}</strong>
-              <span>{step.description}</span>
-            </li>
-          ))}
-        </ol>
-      ) : (
-        <p className="empty-text">No process steps returned yet.</p>
-      )}
-    </section>
-  );
-}
-
-function EvidencePreview({ evidence }: { evidence?: FindingEvidence }) {
-  if (!evidence) {
-    return <p className="evidence-preview">No evidence attached.</p>;
+  if (!report || !finalResponse) {
+    return (
+      <section className="panel result-empty" aria-labelledby="result-title">
+        <p className="eyebrow">3. Result</p>
+        <h2 id="result-title">Run an analysis to see the conclusion</h2>
+        <p className="muted">
+          The result will stay on this page and focus on the decision-ready output.
+        </p>
+      </section>
+    );
   }
 
-  return (
-    <p className="evidence-preview">
-      <strong>Evidence:</strong> {evidence.text}
-    </p>
+  const documentaryFindings = report.findings.filter(
+    (finding) => finding.category === "documentary_gap",
   );
+  const evidence = collectEvidence(report);
+
+  return (
+    <section className="result-stack" aria-labelledby="result-title">
+      <div className="panel result-header">
+        <div>
+          <p className="eyebrow">3. Result</p>
+          <h2 id="result-title">{document?.filename ?? report.summary.source_filename}</h2>
+          <p className="muted">
+            {report.summary.total_findings} finding{report.summary.total_findings === 1 ? "" : "s"} ·
+            {" "}review required: {report.summary.review_required_count}
+          </p>
+        </div>
+        <ConclusionBadge conclusion={finalResponse.conclusion} />
+      </div>
+
+      <FindingsList findings={finalResponse.top_findings} />
+      <MissingItemsList
+        documentaryFindings={documentaryFindings}
+        missingItems={finalResponse.missing_items}
+      />
+
+      <div className="two-card-grid">
+        <NormativeRationaleCard rationale={finalResponse.normative_rationale} />
+        <RecommendedActionCard action={finalResponse.recommended_action} />
+      </div>
+
+      <OptionalDetailsAccordion evidence={evidence} report={report} />
+    </section>
+  );
+}
+
+function ConclusionBadge({ conclusion }: { conclusion: string }) {
+  const tone = conclusionTone(conclusion);
+  return (
+    <div className={`conclusion-badge ${tone}`}>
+      <span>Conclusion</span>
+      <strong>{normalizeConclusion(conclusion)}</strong>
+    </div>
+  );
+}
+
+function FindingsList({ findings }: { findings: FinalResponse["top_findings"] }) {
+  return (
+    <section className="panel" aria-labelledby="findings-title">
+      <p className="eyebrow">Top findings</p>
+      <h2 id="findings-title">Most relevant issues</h2>
+      {findings.length ? (
+        <div className="finding-list">
+          {findings.map((finding) => (
+            <article className="finding-row" key={`${finding.title}-${finding.evidence}`}>
+              <div className="finding-row-header">
+                <h3>{finding.title}</h3>
+                <span className={`severity ${finding.severity}`}>
+                  {formatLabel(finding.severity)}
+                </span>
+              </div>
+              <p>{finding.evidence}</p>
+              <span className="category-pill">{formatLabel(finding.category)}</span>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <p className="empty-text">No evidence-backed issue was returned.</p>
+      )}
+    </section>
+  );
+}
+
+function MissingItemsList({
+  documentaryFindings,
+  missingItems,
+}: {
+  documentaryFindings: ReportFinding[];
+  missingItems: string[];
+}) {
+  const items = mergeMissingItems(missingItems, documentaryFindings);
+
+  return (
+    <section className="panel" aria-labelledby="missing-title">
+      <p className="eyebrow">Missing items</p>
+      <h2 id="missing-title">Documentary gaps</h2>
+      {items.length ? (
+        <ul className="missing-list">
+          {items.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
+      ) : (
+        <p className="empty-text">No missing items were highlighted.</p>
+      )}
+    </section>
+  );
+}
+
+function NormativeRationaleCard({ rationale }: { rationale: string }) {
+  return (
+    <section className="panel compact-panel" aria-labelledby="rationale-title">
+      <p className="eyebrow">Normative rationale</p>
+      <h2 id="rationale-title">Why this matters</h2>
+      <p>{rationale}</p>
+    </section>
+  );
+}
+
+function RecommendedActionCard({ action }: { action: string }) {
+  return (
+    <section className="panel compact-panel" aria-labelledby="action-title">
+      <p className="eyebrow">Recommended action</p>
+      <h2 id="action-title">Next step</h2>
+      <p>{action}</p>
+    </section>
+  );
+}
+
+function OptionalDetailsAccordion({
+  evidence,
+  report,
+}: {
+  evidence: FindingEvidence[];
+  report: AnalysisReport;
+}) {
+  return (
+    <details className="panel optional-details">
+      <summary>Optional details</summary>
+      <div className="details-grid">
+        <div>
+          <h3>Evidence</h3>
+          {evidence.length ? (
+            <ul className="detail-list">
+              {evidence.map((item, index) => (
+                <li key={`${item.source}-${item.text}-${index}`}>
+                  <strong>{formatLabel(item.source)}</strong>
+                  <span>{item.text}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="empty-text">No evidence excerpts returned.</p>
+          )}
+        </div>
+        <div>
+          <h3>Follow-up</h3>
+          {report.follow_up_questions.length ? (
+            <ul className="detail-list">
+              {report.follow_up_questions.slice(0, 5).map((question) => (
+                <li key={question.id}>{question.question}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="empty-text">No follow-up questions returned.</p>
+          )}
+          <div className="metadata-box">
+            <span>Analysis ID</span>
+            <strong>{report.analysis_id}</strong>
+            <span>Generated</span>
+            <strong>{new Date(report.generated_at).toLocaleString()}</strong>
+          </div>
+        </div>
+      </div>
+    </details>
+  );
+}
+
+function getFinalResponse(report: AnalysisReport): FinalResponse {
+  if (report.final_response) {
+    return report.final_response;
+  }
+
+  const topFindings = report.scoped_answer?.top_findings.map((finding) => ({
+    title: finding.title,
+    category: finding.category,
+    severity:
+      report.findings.find((item) => item.id === finding.finding_id)?.score.severity ??
+      "medium",
+    evidence: finding.evidence_text,
+  })) ?? [];
+
+  return {
+    conclusion: report.scoped_answer?.conclusion ?? "INDETERMINATE / HUMAN REVIEW REQUIRED",
+    top_findings: topFindings,
+    missing_items: report.findings
+      .filter((finding) => finding.category === "documentary_gap")
+      .slice(0, 5)
+      .map((finding) => finding.title),
+    normative_rationale:
+      report.scoped_answer?.rationale ??
+      "The backend did not return a short normative rationale.",
+    recommended_action:
+      report.follow_up_questions[0]?.question ??
+      "Review the result and request missing support if needed.",
+  };
 }
 
 function collectEvidence(report: AnalysisReport): FindingEvidence[] {
@@ -406,18 +476,68 @@ function collectEvidence(report: AnalysisReport): FindingEvidence[] {
     ...report.findings.flatMap((finding) => finding.evidence),
   ];
   const seen = new Set<string>();
-  return evidence.filter((item) => {
-    const key = `${item.source}:${item.text}:${item.knowledge_chunk_id ?? ""}`;
-    if (seen.has(key)) {
+  return evidence
+    .filter((item) => {
+      const key = `${item.source}:${item.text}:${item.knowledge_chunk_id ?? ""}`;
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 8);
+}
+
+function mergeMissingItems(
+  missingItems: string[],
+  documentaryFindings: ReportFinding[],
+) {
+  const values = [
+    ...missingItems,
+    ...documentaryFindings.map((finding) => finding.title),
+  ];
+  const seen = new Set<string>();
+  return values.filter((item) => {
+    const key = item.trim().toLowerCase();
+    if (!key || seen.has(key)) {
       return false;
     }
     seen.add(key);
     return true;
-  }).slice(0, 10);
+  }).slice(0, 5);
+}
+
+function normalizeConclusion(conclusion: string) {
+  const normalized = conclusion.trim().toUpperCase();
+  if (normalized === "YES" || normalized === "NO") {
+    return normalized;
+  }
+  return "INDETERMINATE / HUMAN REVIEW REQUIRED";
+}
+
+function conclusionTone(conclusion: string) {
+  const normalized = normalizeConclusion(conclusion);
+  if (normalized === "YES") {
+    return "attention";
+  }
+  if (normalized === "NO") {
+    return "clear";
+  }
+  return "review";
 }
 
 function formatLabel(value: string) {
   return value.replaceAll("_", " ");
+}
+
+function formatBytes(value: number) {
+  if (value < 1024) {
+    return `${value} B`;
+  }
+  if (value < 1024 * 1024) {
+    return `${Math.round(value / 1024)} KB`;
+  }
+  return `${(value / 1024 / 1024).toFixed(1)} MB`;
 }
 
 function readStorage<T>(key: string, fallback: T): T {
