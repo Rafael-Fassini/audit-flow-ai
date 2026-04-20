@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 from app.models.accounting_process import AccountingProcess
 from app.models.document_section import ParsedDocument
 from app.models.knowledge_base import DocumentFamily
+from app.services.retrieval.retrieval_scope import APPROVED_RETRIEVAL_DOCUMENT_FAMILIES
 
 
 class SupportedDocumentType(str, Enum):
@@ -34,8 +35,7 @@ class ProductScopeAssessment(BaseModel):
 
 class ProductScopePolicy:
     APPROVED_NORMATIVE_FAMILIES = (
-        DocumentFamily.NBC_TG_CPC_00_R2,
-        DocumentFamily.LC_214_2025,
+        *APPROVED_RETRIEVAL_DOCUMENT_FAMILIES,
     )
     NORMATIVE_FOCUS = (
         "NBC TG / CPC 00 (R2) for documentation, evidence, traceability, and accounting support.",

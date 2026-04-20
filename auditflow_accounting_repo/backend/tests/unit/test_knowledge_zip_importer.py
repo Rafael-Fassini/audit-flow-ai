@@ -63,5 +63,4 @@ def test_zip_importer_parses_chunks_indexes_and_deduplicates(tmp_path: Path) -> 
     assert lc_214_results[0].snippet.source_file == "docs/LCP_214.txt"
     assert lc_214_results[0].snippet.chunk_id
     assert lc_214_results[0].snippet.raw_text
-    assert dere_results
-    assert dere_results[0].snippet.document_family == DocumentFamily.DERE
+    assert dere_results == []

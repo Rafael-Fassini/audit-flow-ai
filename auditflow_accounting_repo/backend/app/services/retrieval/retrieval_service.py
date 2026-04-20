@@ -6,6 +6,7 @@ from app.models.knowledge_base import (
     RetrievalResult,
 )
 from app.services.retrieval.embeddings import EmbeddingProvider
+from app.services.retrieval.retrieval_scope import approved_retrieval_family_values
 from app.services.retrieval.vector_store import VectorStore
 
 
@@ -16,11 +17,17 @@ class KnowledgeRetrievalService:
         embedding_provider: EmbeddingProvider,
         collection_name: str,
         default_limit: int = 5,
+        allowed_document_families: set[str] | list[str] | tuple[str, ...] | None = None,
     ) -> None:
         self._vector_store = vector_store
         self._embedding_provider = embedding_provider
         self._collection_name = collection_name
         self._default_limit = default_limit
+        self._allowed_document_families = (
+            set(allowed_document_families)
+            if allowed_document_families is not None
+            else approved_retrieval_family_values()
+        )
 
     def retrieve_for_query(
         self,
@@ -32,7 +39,14 @@ class KnowledgeRetrievalService:
         allowed_document_families: set[str] | list[str] | tuple[str, ...] | None = None,
     ) -> list[RetrievalResult]:
         result_limit = limit or self._default_limit
-        allowed_family_values = set(allowed_document_families or [])
+        allowed_family_values = self._effective_allowed_families(
+            allowed_document_families
+        )
+        if not self._metadata_filter_is_within_scope(
+            metadata_filter,
+            allowed_family_values,
+        ):
+            return []
         query_vector = self._embedding_provider.embed(query)
         search_results = self._vector_store.search(
             collection_name=self._collection_name,
@@ -144,11 +158,26 @@ class KnowledgeRetrievalService:
             return False
         return True
 
+    def _effective_allowed_families(
+        self,
+        requested_families: set[str] | list[str] | tuple[str, ...] | None,
+    ) -> set[str]:
+        if requested_families is None:
+            return set(self._allowed_document_families)
+        return set(requested_families).intersection(self._allowed_document_families)
+
+    def _metadata_filter_is_within_scope(
+        self,
+        metadata_filter: dict[str, str] | None,
+        allowed_family_values: set[str],
+    ) -> bool:
+        if not metadata_filter or "document_family" not in metadata_filter:
+            return True
+        return metadata_filter["document_family"] in allowed_family_values
+
     def _is_allowed_family(
         self,
         snippet: KnowledgeSnippet,
         allowed_family_values: set[str],
     ) -> bool:
-        if not allowed_family_values:
-            return True
         return snippet.document_family.value in allowed_family_values

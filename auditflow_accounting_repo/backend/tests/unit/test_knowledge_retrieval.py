@@ -148,8 +148,48 @@ def test_retrieval_filters_and_prioritizes_by_scope_metadata() -> None:
     )
 
     assert general_results[0].snippet.document_family != DocumentFamily.DERE
-    assert dere_results
-    assert all(result.snippet.document_family == DocumentFamily.DERE for result in dere_results)
+    assert dere_results == []
+
+
+def test_retrieval_default_scope_blocks_unrelated_broad_material() -> None:
+    vector_store = InMemoryVectorStore()
+    embedding_provider = DeterministicEmbeddingProvider(vector_size=32)
+    collection_name = "knowledge"
+    KnowledgeIndexer(vector_store, embedding_provider, collection_name).index_documents(
+        [_broad_knowledge_document()]
+    )
+    retrieval_service = KnowledgeRetrievalService(
+        vector_store=vector_store,
+        embedding_provider=embedding_provider,
+        collection_name=collection_name,
+        default_limit=3,
+    )
+
+    results = retrieval_service.retrieve_for_query("broad legal tax reform opinion")
+
+    assert results == []
+
+
+def test_retrieval_request_cannot_widen_default_approved_scope() -> None:
+    vector_store = InMemoryVectorStore()
+    embedding_provider = DeterministicEmbeddingProvider(vector_size=32)
+    collection_name = "knowledge"
+    KnowledgeIndexer(vector_store, embedding_provider, collection_name).index_documents(
+        [_scoped_knowledge_document()]
+    )
+    retrieval_service = KnowledgeRetrievalService(
+        vector_store=vector_store,
+        embedding_provider=embedding_provider,
+        collection_name=collection_name,
+        default_limit=3,
+    )
+
+    results = retrieval_service.retrieve_for_query(
+        "DeRE regime specific classification",
+        allowed_document_families={DocumentFamily.DERE.value},
+    )
+
+    assert results == []
 
 
 def test_retrieval_can_restrict_to_approved_normative_families() -> None:
@@ -195,6 +235,7 @@ def _knowledge_document() -> KnowledgeDocument:
                 ),
                 category=KnowledgeCategory.CHART_OF_ACCOUNTS,
                 tags=["clearing", "reconciliation"],
+                document_family=DocumentFamily.NBC_TG_CPC_00_R2,
             ),
             KnowledgeSnippet(
                 id="accrued-liability-support",
@@ -206,6 +247,7 @@ def _knowledge_document() -> KnowledgeDocument:
                 ),
                 category=KnowledgeCategory.POSTING_GUIDANCE,
                 tags=["accrual", "liability"],
+                document_family=DocumentFamily.NBC_TG_CPC_00_R2,
             ),
             KnowledgeSnippet(
                 id="approval-control",
@@ -214,6 +256,35 @@ def _knowledge_document() -> KnowledgeDocument:
                 text="Journal entries should be approved before posting to the ledger.",
                 category=KnowledgeCategory.CONTROL_GUIDANCE,
                 tags=["approval", "control"],
+                document_family=DocumentFamily.NBC_TG_CPC_00_R2,
+            ),
+        ],
+    )
+
+
+def _broad_knowledge_document() -> KnowledgeDocument:
+    return KnowledgeDocument(
+        id="broad-guidance",
+        title="Broad material",
+        source="test",
+        category=KnowledgeCategory.ACCOUNTING_POLICY,
+        snippets=[
+            KnowledgeSnippet(
+                id="broad-tax-opinion",
+                document_id="broad-guidance",
+                title="Broad tax reform opinion",
+                text="Broad legal tax reform opinion outside the scoped support use case.",
+                category=KnowledgeCategory.ACCOUNTING_POLICY,
+                document_family=DocumentFamily.SOCIETARIO_GERAL,
+            ),
+            KnowledgeSnippet(
+                id="unrelated-dere",
+                document_id="broad-guidance",
+                title="Unrelated DeRE manual",
+                text="DeRE regime specific material outside the approved mentor scope.",
+                category=KnowledgeCategory.POSTING_GUIDANCE,
+                document_family=DocumentFamily.DERE,
+                document_scope=DocumentScope.REGIME_ESPECIFICO,
             ),
         ],
     )

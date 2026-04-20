@@ -53,9 +53,5 @@ def test_actual_recommended_zip_imports_and_retrieves_scoped_chunks() -> None:
     assert lc_214_results
     assert lc_214_results[0].snippet.source_archive == archive_path.name
     assert lc_214_results[0].snippet.raw_text
-    assert dere_results
-    assert all(
-        result.snippet.document_scope == DocumentScope.REGIME_ESPECIFICO
-        for result in dere_results
-    )
+    assert dere_results == []
     assert general_results[0].snippet.document_family != DocumentFamily.DERE
