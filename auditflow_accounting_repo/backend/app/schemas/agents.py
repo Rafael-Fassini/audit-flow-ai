@@ -21,6 +21,7 @@ class AgentRole(str, Enum):
     DOCUMENT_UNDERSTANDING = "document_understanding"
     RED_FLAG = "red_flag"
     ACCOUNTING_AUDIT = "accounting_audit"
+    REVIEWER = "reviewer"
     PROCESS_STRUCTURER = "process_structurer"
     KNOWLEDGE_RETRIEVER = "knowledge_retriever"
     RISK_INFERENCE = "risk_inference"
@@ -223,6 +224,77 @@ class AccountingAuditAgentOutput(BaseModel):
         finding_ids = [finding.id for finding in self.findings]
         if len(finding_ids) != len(set(finding_ids)):
             raise ValueError("accounting audit finding ids must be unique")
+        return self
+
+
+class ReviewerFindingKind(str, Enum):
+    OPERATIONAL = "operational"
+    DOCUMENTARY_GAP = "documentary_gap"
+
+
+class ReviewerSource(str, Enum):
+    RED_FLAG = "red_flag"
+    ACCOUNTING_AUDIT = "accounting_audit"
+
+
+class ReviewerSeverity(str, Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
+class ReviewerEvidence(BaseModel):
+    text: str = Field(min_length=1)
+    source: Literal["document"] = "document"
+    source_agent: ReviewerSource
+    source_finding_id: str = Field(min_length=1)
+
+
+class ReviewedFinding(BaseModel):
+    id: str = Field(min_length=1)
+    kind: ReviewerFindingKind
+    category: str = Field(min_length=1)
+    title: str = Field(min_length=1)
+    description: str = Field(min_length=1)
+    severity: ReviewerSeverity
+    confidence: float = Field(ge=0.0, le=1.0)
+    review_required: bool
+    source_finding_ids: list[str] = Field(min_length=1)
+    evidence: list[ReviewerEvidence] = Field(min_length=1)
+
+
+class ReviewerFollowUpQuestion(BaseModel):
+    id: str = Field(min_length=1)
+    question: str = Field(min_length=1)
+    rationale: str = Field(min_length=1)
+    related_finding_ids: list[str] = Field(default_factory=list)
+
+
+class ReviewerAgentInput(BaseModel):
+    red_flag_output: RedFlagAgentOutput | None = None
+    accounting_audit_output: AccountingAuditAgentOutput | None = None
+    analysis_id: str | None = None
+
+
+class ReviewerAgentOutput(BaseModel):
+    metadata: AgentOutputMetadata
+    operational_findings: list[ReviewedFinding] = Field(default_factory=list)
+    documentary_gaps: list[ReviewedFinding] = Field(default_factory=list)
+    follow_up_questions: list[ReviewerFollowUpQuestion] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_reviewer_output(self) -> "ReviewerAgentOutput":
+        if self.metadata.agent_role != AgentRole.REVIEWER:
+            raise ValueError("reviewer output metadata must use reviewer agent role")
+        finding_ids = [
+            finding.id
+            for finding in self.operational_findings + self.documentary_gaps
+        ]
+        if len(finding_ids) != len(set(finding_ids)):
+            raise ValueError("reviewed finding ids must be unique")
+        question_ids = [question.id for question in self.follow_up_questions]
+        if len(question_ids) != len(set(question_ids)):
+            raise ValueError("reviewer follow-up question ids must be unique")
         return self
 
 

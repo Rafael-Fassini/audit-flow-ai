@@ -20,6 +20,7 @@ from app.schemas.agents import (
     DocumentLoaderAgentOutput,
     DocumentParserAgentOutput,
     ProcessStructurerAgentOutput,
+    ReviewerAgentOutput,
     RiskInferenceAgentOutput,
 )
 
@@ -99,6 +100,9 @@ def test_agent_output_schemas_accept_current_pipeline_models() -> None:
     assert RiskInferenceAgentOutput(
         metadata=metadata.model_copy(update={"agent_role": AgentRole.RISK_INFERENCE}),
         risk_result=RiskInferenceResult(),
+    )
+    assert ReviewerAgentOutput(
+        metadata=metadata.model_copy(update={"agent_role": AgentRole.REVIEWER}),
     )
 
 
