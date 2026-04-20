@@ -89,6 +89,24 @@ From `backend/`:
 pytest -q
 ```
 
+## API usage
+Interactive API docs are available at:
+```text
+http://localhost:${APP_PORT:-8000}/docs
+```
+
+Main endpoints:
+- `GET /health`
+- `POST /documents/`
+- `POST /analysis/reports`
+
+All responses include an `X-Request-ID` header. Pass your own
+`X-Request-ID` when you need to correlate a client call with backend logs.
+
+Example requests:
+- `docs/examples/document_upload.md`
+- `docs/examples/analysis_report_request.json`
+
 ## Documentation
 - Architecture: `docs/ARCHITECTURE.md`
 - Execution plan: `docs/EXECUTION_PLAN.md`

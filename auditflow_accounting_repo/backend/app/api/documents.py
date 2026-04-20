@@ -8,6 +8,7 @@ from app.core.config import get_settings
 from app.models.document import DocumentMetadata
 from app.repositories.document_repository import JsonDocumentRepository
 from app.schemas.document import DocumentUploadResponse
+from app.schemas.error import ErrorResponse
 from app.services.ingestion.document_ingestion import DocumentIngestionService
 from app.services.ingestion.storage import (
     DocumentTooLargeError,
@@ -40,6 +41,11 @@ async def get_document_ingestion_service() -> DocumentIngestionService:
     "/",
     response_model=DocumentUploadResponse,
     status_code=status.HTTP_201_CREATED,
+    responses={
+        status.HTTP_400_BAD_REQUEST: {"model": ErrorResponse},
+        status.HTTP_413_REQUEST_ENTITY_TOO_LARGE: {"model": ErrorResponse},
+        status.HTTP_415_UNSUPPORTED_MEDIA_TYPE: {"model": ErrorResponse},
+    },
 )
 async def upload_document(
     request: Request,

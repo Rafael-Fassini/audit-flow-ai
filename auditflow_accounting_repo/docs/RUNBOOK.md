@@ -23,6 +23,72 @@ Qdrant:
 curl "http://localhost:${QDRANT_HTTP_PORT:-6333}/collections"
 ```
 
+## API docs and request tracing
+OpenAPI docs are available at:
+```text
+http://localhost:${APP_PORT:-8000}/docs
+```
+
+Each API response includes an `X-Request-ID` header. Clients may provide this
+header, and the backend will preserve it:
+```bash
+curl "http://localhost:${APP_PORT:-8000}/health" \
+  -H "X-Request-ID: local-health-1"
+```
+
+Backend request logs are structured JSON on stdout. The main fields are:
+- `timestamp`
+- `level`
+- `logger`
+- `message`
+- `request_id`
+- `method`
+- `path`
+- `status_code`
+- `duration_ms`
+
+Do not log request bodies, uploaded document contents, API keys, database URLs,
+or client confidential data.
+
+## Error responses
+HTTP errors keep FastAPI-compatible `detail` output and add a structured
+`error` object:
+```json
+{
+  "detail": "Supported document types are PDF, DOCX, and TXT.",
+  "error": {
+    "code": "unsupported_media_type",
+    "message": "Supported document types are PDF, DOCX, and TXT.",
+    "request_id": "local-upload-1",
+    "details": null
+  }
+}
+```
+
+Validation failures use `error.code=validation_error`, with the validation
+items repeated in `error.details` for clients that need stable error metadata.
+
+## Example payloads and sample data
+Example requests live under:
+```text
+docs/examples/
+```
+
+Use `docs/examples/document_upload.md` for document upload commands.
+Use `docs/examples/analysis_report_request.json` as the minimal structured
+payload for `POST /analysis/reports`.
+
+Sample documents should be synthetic and small. Include enough accounting
+context to exercise the pipeline:
+- business event narrative
+- chart-of-accounts references
+- posting logic
+- approval or review controls
+- supporting evidence or known gaps
+
+Avoid real client files, secrets, personal data, and production ledgers in local
+sample data.
+
 ## Local backend run
 ```bash
 cd backend
@@ -139,3 +205,9 @@ Optional variables with defaults:
 - confirm API key is present
 - confirm the selected model name is valid
 - inspect backend logs for provider errors
+
+### Correlating a failing request
+- repeat the request with a known `X-Request-ID`
+- search backend logs for the same `request_id`
+- inspect `status_code`, `path`, and `duration_ms`
+- use the structured `error.code` to separate validation, upload, and server errors

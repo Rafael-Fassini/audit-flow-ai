@@ -71,4 +71,7 @@ async def test_upload_document_rejects_unsupported_file_type(tmp_path) -> None:
         )
 
     assert response.status_code == 415
-    assert response.json()["detail"] == "Supported document types are PDF, DOCX, and TXT."
+    payload = response.json()
+    assert payload["detail"] == "Supported document types are PDF, DOCX, and TXT."
+    assert payload["error"]["code"] == "unsupported_media_type"
+    assert payload["error"]["request_id"]

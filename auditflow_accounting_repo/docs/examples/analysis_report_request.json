@@ -1,0 +1,58 @@
+{
+  "analysis_id": "analysis-example-1",
+  "process": {
+    "process_name": "Suspense account posting",
+    "summary": "The team records manual entries in a suspense account while waiting for support documents.",
+    "source_filename": "walkthrough.txt",
+    "steps": [
+      {
+        "index": 0,
+        "description": "Operations sends a posting request to accounting.",
+        "actors": ["Operations"],
+        "systems": ["ERP"],
+        "controls": ["Manager approval by email"],
+        "accounts": [
+          {
+            "code": "1.1.9.99",
+            "name": "Suspense account",
+            "account_type": "asset",
+            "usage_context": "Temporary posting until supporting documents arrive"
+          }
+        ],
+        "posting_logic": "Debit suspense account and clear after documentation review.",
+        "source_section": "Walkthrough"
+      }
+    ],
+    "gaps": ["No closure deadline is documented."]
+  },
+  "risk_result": {
+    "inconsistencies": [
+      {
+        "id": "inc-1",
+        "type": "account_usage",
+        "title": "Suspense account needs rationale",
+        "description": "Suspense account lacks clear closure logic and supporting evidence.",
+        "source": "heuristic",
+        "severity_hint": "medium",
+        "confidence_hint": 0.8,
+        "evidence": [
+          {
+            "source": "process",
+            "text": "manual entries in a suspense account",
+            "section_index": 0,
+            "chunk_index": 0
+          }
+        ]
+      }
+    ],
+    "risks": [],
+    "follow_up_questions": [
+      {
+        "id": "q-1",
+        "question": "What is the deadline and owner for clearing suspense postings?",
+        "rationale": "Suspense accounts require closure logic to reduce unresolved balances.",
+        "related_finding_ids": ["inc-1"]
+      }
+    ]
+  }
+}

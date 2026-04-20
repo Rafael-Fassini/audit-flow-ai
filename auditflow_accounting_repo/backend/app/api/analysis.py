@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from app.models.accounting_process import AccountingProcess
 from app.models.report import AnalysisReport
 from app.models.risk import RiskInferenceResult
+from app.schemas.error import ErrorResponse
 from app.services.reporting.analysis_report_builder import AnalysisReportBuilder
 from app.services.scoring.finding_scorer import FindingScorer
 
@@ -24,6 +25,9 @@ async def get_analysis_report_builder() -> AnalysisReportBuilder:
     "/reports",
     response_model=AnalysisReport,
     status_code=status.HTTP_201_CREATED,
+    responses={
+        status.HTTP_422_UNPROCESSABLE_ENTITY: {"model": ErrorResponse},
+    },
 )
 async def build_analysis_report(
     request: AnalysisAssemblyRequest,
