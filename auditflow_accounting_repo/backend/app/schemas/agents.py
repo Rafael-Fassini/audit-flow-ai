@@ -20,6 +20,7 @@ class AgentRole(str, Enum):
     DOCUMENT_CHUNKER = "document_chunker"
     DOCUMENT_UNDERSTANDING = "document_understanding"
     RED_FLAG = "red_flag"
+    ACCOUNTING_AUDIT = "accounting_audit"
     PROCESS_STRUCTURER = "process_structurer"
     KNOWLEDGE_RETRIEVER = "knowledge_retriever"
     RISK_INFERENCE = "risk_inference"
@@ -167,6 +168,61 @@ class RedFlagAgentOutput(BaseModel):
         finding_ids = [finding.id for finding in self.findings]
         if len(finding_ids) != len(set(finding_ids)):
             raise ValueError("red flag finding ids must be unique")
+        return self
+
+
+class AccountingAuditCategory(str, Enum):
+    DOCUMENTARY_GAP = "documentary_gap"
+    CONTROL_GAP = "control_gap"
+    TRACEABILITY_GAP = "traceability_gap"
+    RECONCILIATION_GAP = "reconciliation_gap"
+    COST_CENTER_INCONSISTENCY = "cost_center_inconsistency"
+    APPROVAL_WEAKNESS = "approval_weakness"
+    POSTING_INCONSISTENCY = "posting_inconsistency"
+
+
+class AccountingAuditSeverity(str, Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
+class AccountingAuditEvidence(BaseModel):
+    text: str = Field(min_length=1)
+    source: Literal["document"] = "document"
+
+
+class AccountingAuditCandidateFinding(BaseModel):
+    id: str = Field(min_length=1)
+    category: AccountingAuditCategory
+    title: str = Field(min_length=1)
+    description: str = Field(min_length=1)
+    severity: AccountingAuditSeverity
+    evidence: list[AccountingAuditEvidence] = Field(min_length=1)
+    account_references: list[str] = Field(default_factory=list)
+    cost_center_references: list[str] = Field(default_factory=list)
+
+
+class AccountingAuditAgentInput(BaseModel):
+    parsed_document: ParsedDocument
+    document_metadata: DocumentMetadata
+    understanding: DocumentUnderstandingResult | None = None
+    analysis_id: str | None = None
+
+
+class AccountingAuditAgentOutput(BaseModel):
+    metadata: AgentOutputMetadata
+    findings: list[AccountingAuditCandidateFinding] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_accounting_audit_output(self) -> "AccountingAuditAgentOutput":
+        if self.metadata.agent_role != AgentRole.ACCOUNTING_AUDIT:
+            raise ValueError(
+                "accounting audit output metadata must use accounting_audit agent role"
+            )
+        finding_ids = [finding.id for finding in self.findings]
+        if len(finding_ids) != len(set(finding_ids)):
+            raise ValueError("accounting audit finding ids must be unique")
         return self
 
 

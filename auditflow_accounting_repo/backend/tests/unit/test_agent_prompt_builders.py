@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from pathlib import Path
 
+from app.agents.prompts.accounting_audit import build_accounting_audit_prompt
 from app.agents.prompts.document_understanding import (
     build_document_understanding_prompt,
 )
@@ -73,6 +74,18 @@ def test_prompt_builders_return_schema_bound_payloads_without_model_config() -> 
                 created_at=datetime(2026, 4, 20, tzinfo=timezone.utc),
             ),
         ),
+        build_accounting_audit_prompt(
+            document,
+            DocumentMetadata(
+                id="document-1",
+                original_filename="memo.txt",
+                content_type="text/plain",
+                size_bytes=128,
+                storage_path=Path("storage/uploads/memo.txt"),
+                status=DocumentStatus.STORED,
+                created_at=datetime(2026, 4, 20, tzinfo=timezone.utc),
+            ),
+        ),
         build_process_structuring_prompt(document),
         build_risk_inference_prompt(process, []),
         build_report_assembly_prompt(process, RiskInferenceResult()),
@@ -81,6 +94,7 @@ def test_prompt_builders_return_schema_bound_payloads_without_model_config() -> 
     assert [payload.response_schema for payload in payloads] == [
         "DocumentUnderstandingAgentOutput",
         "RedFlagAgentOutput",
+        "AccountingAuditAgentOutput",
         "ProcessStructurerAgentOutput",
         "RiskInferenceAgentOutput",
         "ReportAssemblerAgentOutput",

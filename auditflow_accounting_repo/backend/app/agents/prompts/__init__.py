@@ -1,5 +1,6 @@
 """Prompt builders for planned analysis agents."""
 
+from app.agents.prompts.accounting_audit import build_accounting_audit_prompt
 from app.agents.prompts.base import PromptMessage, PromptPayload
 from app.agents.prompts.document_understanding import (
     build_document_understanding_prompt,
@@ -12,6 +13,7 @@ from app.agents.prompts.risk_inference import build_risk_inference_prompt
 __all__ = [
     "PromptMessage",
     "PromptPayload",
+    "build_accounting_audit_prompt",
     "build_document_understanding_prompt",
     "build_process_structuring_prompt",
     "build_red_flag_prompt",
