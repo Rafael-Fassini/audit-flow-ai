@@ -1,7 +1,14 @@
+from datetime import datetime, timezone
+from pathlib import Path
+
+from app.agents.prompts.document_understanding import (
+    build_document_understanding_prompt,
+)
 from app.agents.prompts.process_structuring import build_process_structuring_prompt
 from app.agents.prompts.report_assembly import build_report_assembly_prompt
 from app.agents.prompts.risk_inference import build_risk_inference_prompt
 from app.models.accounting_process import AccountingProcess
+from app.models.document import DocumentMetadata, DocumentStatus
 from app.models.document_section import (
     ChunkedDocument,
     DocumentChunk,
@@ -41,12 +48,25 @@ def test_prompt_builders_return_schema_bound_payloads_without_model_config() -> 
     )
 
     payloads = [
+        build_document_understanding_prompt(
+            document,
+            DocumentMetadata(
+                id="document-1",
+                original_filename="memo.txt",
+                content_type="text/plain",
+                size_bytes=128,
+                storage_path=Path("storage/uploads/memo.txt"),
+                status=DocumentStatus.STORED,
+                created_at=datetime(2026, 4, 20, tzinfo=timezone.utc),
+            ),
+        ),
         build_process_structuring_prompt(document),
         build_risk_inference_prompt(process, []),
         build_report_assembly_prompt(process, RiskInferenceResult()),
     ]
 
     assert [payload.response_schema for payload in payloads] == [
+        "DocumentUnderstandingAgentOutput",
         "ProcessStructurerAgentOutput",
         "RiskInferenceAgentOutput",
         "ReportAssemblerAgentOutput",

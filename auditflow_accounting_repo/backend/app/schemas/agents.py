@@ -4,6 +4,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, model_validator
 
 from app.models.accounting_process import AccountingProcess
+from app.models.document import DocumentMetadata
 from app.models.document_section import ChunkedDocument, ParsedDocument
 from app.models.knowledge_base import RetrievalResult
 from app.models.report import AnalysisReport
@@ -17,6 +18,7 @@ class AgentRole(str, Enum):
     DOCUMENT_LOADER = "document_loader"
     DOCUMENT_PARSER = "document_parser"
     DOCUMENT_CHUNKER = "document_chunker"
+    DOCUMENT_UNDERSTANDING = "document_understanding"
     PROCESS_STRUCTURER = "process_structurer"
     KNOWLEDGE_RETRIEVER = "knowledge_retriever"
     RISK_INFERENCE = "risk_inference"
@@ -66,6 +68,52 @@ class DocumentParserAgentOutput(BaseModel):
 class DocumentChunkerAgentOutput(BaseModel):
     metadata: AgentOutputMetadata
     chunked_document: ChunkedDocument
+
+
+class DocumentUnderstandingStep(BaseModel):
+    index: int = Field(ge=0)
+    description: str = Field(min_length=1)
+    evidence_text: str = Field(min_length=1)
+
+
+class DocumentUnderstandingEntity(BaseModel):
+    value: str = Field(min_length=1)
+    evidence_text: str = Field(min_length=1)
+
+
+class DocumentUnderstandingResult(BaseModel):
+    process_name: str = Field(min_length=1)
+    summary: str = Field(min_length=1)
+    steps: list[DocumentUnderstandingStep] = Field(default_factory=list)
+    controls: list[DocumentUnderstandingEntity] = Field(default_factory=list)
+    actors: list[DocumentUnderstandingEntity] = Field(default_factory=list)
+    values: list[DocumentUnderstandingEntity] = Field(default_factory=list)
+    dates: list[DocumentUnderstandingEntity] = Field(default_factory=list)
+    approvals: list[DocumentUnderstandingEntity] = Field(default_factory=list)
+    payments: list[DocumentUnderstandingEntity] = Field(default_factory=list)
+    account_references: list[DocumentUnderstandingEntity] = Field(default_factory=list)
+    cost_center_references: list[DocumentUnderstandingEntity] = Field(
+        default_factory=list
+    )
+
+    @model_validator(mode="after")
+    def step_indexes_are_sequential(self) -> "DocumentUnderstandingResult":
+        expected = list(range(len(self.steps)))
+        actual = [step.index for step in self.steps]
+        if actual != expected:
+            raise ValueError("document understanding step indexes must be sequential")
+        return self
+
+
+class DocumentUnderstandingAgentInput(BaseModel):
+    parsed_document: ParsedDocument
+    document_metadata: DocumentMetadata
+    analysis_id: str | None = None
+
+
+class DocumentUnderstandingAgentOutput(BaseModel):
+    metadata: AgentOutputMetadata
+    understanding: DocumentUnderstandingResult
 
 
 class ProcessStructurerAgentOutput(BaseModel):

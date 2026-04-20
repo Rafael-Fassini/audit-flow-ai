@@ -75,7 +75,9 @@ def test_agent_output_schemas_accept_current_pipeline_models() -> None:
     )
 
     assert DocumentLoaderAgentOutput(
-        metadata=metadata.model_copy(update={"agent_role": AgentRole.DOCUMENT_LOADER}),
+        metadata=metadata.model_copy(
+            update={"agent_role": AgentRole.DOCUMENT_LOADER}
+        ),
         filename="memo.txt",
         size_bytes=128,
         content_sha256="a" * 64,
