@@ -38,9 +38,9 @@ def test_actual_recommended_zip_imports_and_retrieves_scoped_chunks() -> None:
         collection_name=collection_name,
         default_limit=3,
     )
-    reforma_results = retrieval_service.retrieve_for_query(
+    lc_214_results = retrieval_service.retrieve_for_query(
         "IBS CBS imposto seletivo reforma tributaria",
-        metadata_filter={"document_family": DocumentFamily.REFORMA_TRIBUTARIA.value},
+        metadata_filter={"document_family": DocumentFamily.LC_214_2025.value},
     )
     dere_results = retrieval_service.retrieve_for_query(
         "DeRE leiaute eventos regimes especificos",
@@ -50,9 +50,9 @@ def test_actual_recommended_zip_imports_and_retrieves_scoped_chunks() -> None:
         "IBS CBS norma geral reforma tributaria",
     )
 
-    assert reforma_results
-    assert reforma_results[0].snippet.source_archive == archive_path.name
-    assert reforma_results[0].snippet.raw_text
+    assert lc_214_results
+    assert lc_214_results[0].snippet.source_archive == archive_path.name
+    assert lc_214_results[0].snippet.raw_text
     assert dere_results
     assert all(
         result.snippet.document_scope == DocumentScope.REGIME_ESPECIFICO

@@ -1,7 +1,11 @@
 from app.models.knowledge_base import (
+    DocumentFamily,
+    DocumentScope,
+    AuthorityLevel,
     KnowledgeCategory,
     KnowledgeDocument,
     KnowledgeSnippet,
+    RegimeApplicability,
 )
 
 
@@ -24,6 +28,10 @@ def default_knowledge_documents() -> list[KnowledgeDocument]:
                     ),
                     category=KnowledgeCategory.CHART_OF_ACCOUNTS,
                     tags=["chart-of-accounts", "clearing", "suspense"],
+                    document_family=DocumentFamily.NBC_TG_CPC_00_R2,
+                    document_scope=DocumentScope.NORMA_GERAL,
+                    authority_level=AuthorityLevel.LEI,
+                    regime_applicability=RegimeApplicability.GERAL,
                 ),
                 KnowledgeSnippet(
                     id="posting-business-event-alignment",
@@ -36,6 +44,10 @@ def default_knowledge_documents() -> list[KnowledgeDocument]:
                     ),
                     category=KnowledgeCategory.POSTING_GUIDANCE,
                     tags=["posting", "classification"],
+                    document_family=DocumentFamily.NBC_TG_CPC_00_R2,
+                    document_scope=DocumentScope.NORMA_GERAL,
+                    authority_level=AuthorityLevel.LEI,
+                    regime_applicability=RegimeApplicability.GERAL,
                 ),
                 KnowledgeSnippet(
                     id="journal-entry-support-control",
@@ -47,6 +59,10 @@ def default_knowledge_documents() -> list[KnowledgeDocument]:
                     ),
                     category=KnowledgeCategory.CONTROL_GUIDANCE,
                     tags=["approval", "evidence", "control"],
+                    document_family=DocumentFamily.NBC_TG_CPC_00_R2,
+                    document_scope=DocumentScope.NORMA_GERAL,
+                    authority_level=AuthorityLevel.LEI,
+                    regime_applicability=RegimeApplicability.GERAL,
                 ),
             ],
         )

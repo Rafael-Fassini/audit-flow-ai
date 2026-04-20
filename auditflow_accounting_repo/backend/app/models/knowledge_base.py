@@ -12,6 +12,8 @@ class KnowledgeCategory(str, Enum):
 
 
 class DocumentFamily(str, Enum):
+    NBC_TG_CPC_00_R2 = "nbc_tg_cpc_00_r2"
+    LC_214_2025 = "lc_214_2025"
     DERE = "dere"
     REFORMA_TRIBUTARIA = "reforma_tributaria"
     SOCIETARIO_GERAL = "societario_geral"

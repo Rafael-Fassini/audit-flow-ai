@@ -447,6 +447,28 @@ async def test_prompt_injection_like_document_content_does_not_elevate_trust(tmp
 
 
 @pytest.mark.anyio
+async def test_out_of_scope_document_returns_explicit_scope_finding(tmp_path) -> None:
+    app, _ = _app_with_test_services(tmp_path, include_agents=True)
+
+    payload = await _upload_and_analyze(
+        app=app,
+        filename="marketing_campaign_plan.txt",
+        text=(
+            "Campaign goals, brand messaging, target audiences, media channels, "
+            "and creative budget allocation."
+        ),
+    )
+
+    assert payload["status"] == "completed"
+    assert payload["summary"]["total_findings"] == 1
+    assert payload["summary"]["review_required_count"] == 1
+    assert payload["findings"][0]["source"] == "product_scope"
+    assert payload["findings"][0]["category"] == "out_of_scope"
+    assert payload["findings"][0]["score"]["review_required"] is True
+    assert payload["follow_up_questions"]
+
+
+@pytest.mark.anyio
 async def test_agent_enrichment_failure_does_not_leak_raw_exception(tmp_path) -> None:
     metadata_path = tmp_path / "document_metadata.json"
     report_path = tmp_path / "analysis_reports.json"

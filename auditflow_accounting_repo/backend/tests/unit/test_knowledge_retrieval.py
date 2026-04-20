@@ -152,6 +152,32 @@ def test_retrieval_filters_and_prioritizes_by_scope_metadata() -> None:
     assert all(result.snippet.document_family == DocumentFamily.DERE for result in dere_results)
 
 
+def test_retrieval_can_restrict_to_approved_normative_families() -> None:
+    vector_store = InMemoryVectorStore()
+    embedding_provider = DeterministicEmbeddingProvider(vector_size=32)
+    collection_name = "knowledge"
+    KnowledgeIndexer(vector_store, embedding_provider, collection_name).index_documents(
+        [_scoped_knowledge_document()]
+    )
+    retrieval_service = KnowledgeRetrievalService(
+        vector_store=vector_store,
+        embedding_provider=embedding_provider,
+        collection_name=collection_name,
+        default_limit=3,
+    )
+
+    results = retrieval_service.retrieve_for_query(
+        "account classification rule",
+        allowed_document_families={DocumentFamily.LC_214_2025.value},
+    )
+
+    assert results
+    assert all(
+        result.snippet.document_family == DocumentFamily.LC_214_2025
+        for result in results
+    )
+
+
 def _knowledge_document() -> KnowledgeDocument:
     return KnowledgeDocument(
         id="accounting-guidance",
@@ -206,7 +232,7 @@ def _scoped_knowledge_document() -> KnowledgeDocument:
                 title="General account classification",
                 text="Account classification rule for general accounting context.",
                 category=KnowledgeCategory.ACCOUNTING_POLICY,
-                document_family=DocumentFamily.REFORMA_TRIBUTARIA,
+                document_family=DocumentFamily.LC_214_2025,
                 document_scope=DocumentScope.NORMA_GERAL,
                 authority_level=AuthorityLevel.LEI,
                 regime_applicability=RegimeApplicability.GERAL,

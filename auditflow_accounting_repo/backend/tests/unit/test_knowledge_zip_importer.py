@@ -49,19 +49,19 @@ def test_zip_importer_parses_chunks_indexes_and_deduplicates(tmp_path: Path) -> 
         embedding_provider=embedding_provider,
         collection_name=collection_name,
     )
-    reforma_results = retrieval_service.retrieve_for_query(
+    lc_214_results = retrieval_service.retrieve_for_query(
         "IBS CBS reforma tributaria",
-        metadata_filter={"document_family": DocumentFamily.REFORMA_TRIBUTARIA.value},
+        metadata_filter={"document_family": DocumentFamily.LC_214_2025.value},
     )
     dere_results = retrieval_service.retrieve_for_query(
         "DeRE financial services",
         metadata_filter={"document_scope": DocumentScope.REGIME_ESPECIFICO.value},
     )
 
-    assert reforma_results
-    assert reforma_results[0].snippet.source_archive == "kb.zip"
-    assert reforma_results[0].snippet.source_file == "docs/LCP_214.txt"
-    assert reforma_results[0].snippet.chunk_id
-    assert reforma_results[0].snippet.raw_text
+    assert lc_214_results
+    assert lc_214_results[0].snippet.source_archive == "kb.zip"
+    assert lc_214_results[0].snippet.source_file == "docs/LCP_214.txt"
+    assert lc_214_results[0].snippet.chunk_id
+    assert lc_214_results[0].snippet.raw_text
     assert dere_results
     assert dere_results[0].snippet.document_family == DocumentFamily.DERE

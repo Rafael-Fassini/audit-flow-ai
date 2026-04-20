@@ -29,8 +29,10 @@ class KnowledgeRetrievalService:
         metadata_filter: dict[str, str] | None = None,
         preferred_document_scope: str | None = None,
         preferred_regime_applicability: str | None = None,
+        allowed_document_families: set[str] | list[str] | tuple[str, ...] | None = None,
     ) -> list[RetrievalResult]:
         result_limit = limit or self._default_limit
+        allowed_family_values = set(allowed_document_families or [])
         query_vector = self._embedding_provider.embed(query)
         search_results = self._vector_store.search(
             collection_name=self._collection_name,
@@ -52,6 +54,10 @@ class KnowledgeRetrievalService:
             )
             for result in search_results
             if "snippet" in result.payload
+            and self._is_allowed_family(
+                KnowledgeSnippet.model_validate(result.payload["snippet"]),
+                allowed_family_values,
+            )
         ]
         results.sort(key=lambda result: result.score, reverse=True)
         return results[:result_limit]
@@ -63,6 +69,7 @@ class KnowledgeRetrievalService:
         metadata_filter: dict[str, str] | None = None,
         preferred_document_scope: str | None = None,
         preferred_regime_applicability: str | None = None,
+        allowed_document_families: set[str] | list[str] | tuple[str, ...] | None = None,
     ) -> list[RetrievalResult]:
         return self.retrieve_for_query(
             query=self._query_from_process(process),
@@ -70,6 +77,7 @@ class KnowledgeRetrievalService:
             metadata_filter=metadata_filter,
             preferred_document_scope=preferred_document_scope,
             preferred_regime_applicability=preferred_regime_applicability,
+            allowed_document_families=allowed_document_families,
         )
 
     def _query_from_process(self, process: AccountingProcess) -> str:
@@ -135,3 +143,12 @@ class KnowledgeRetrievalService:
         if any(term in lower_query for term in regime_terms):
             return False
         return True
+
+    def _is_allowed_family(
+        self,
+        snippet: KnowledgeSnippet,
+        allowed_family_values: set[str],
+    ) -> bool:
+        if not allowed_family_values:
+            return True
+        return snippet.document_family.value in allowed_family_values

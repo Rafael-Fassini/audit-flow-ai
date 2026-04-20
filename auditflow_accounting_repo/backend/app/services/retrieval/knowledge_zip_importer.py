@@ -175,7 +175,16 @@ class KnowledgeZipImporter:
 
         if "lcp_214" in normalized or "lcp 214" in normalized:
             return KnowledgeDocumentMetadata(
-                document_family=DocumentFamily.REFORMA_TRIBUTARIA,
+                document_family=DocumentFamily.LC_214_2025,
+                document_scope=DocumentScope.NORMA_GERAL,
+                authority_level=AuthorityLevel.LEI,
+                regime_applicability=RegimeApplicability.GERAL,
+                category=KnowledgeCategory.ACCOUNTING_POLICY,
+            )
+
+        if "cpc_00" in normalized or "cpc 00" in normalized:
+            return KnowledgeDocumentMetadata(
+                document_family=DocumentFamily.NBC_TG_CPC_00_R2,
                 document_scope=DocumentScope.NORMA_GERAL,
                 authority_level=AuthorityLevel.LEI,
                 regime_applicability=RegimeApplicability.GERAL,
