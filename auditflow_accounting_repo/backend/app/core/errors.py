@@ -56,7 +56,7 @@ async def unhandled_exception_handler(
     request: Request,
     exc: Exception,
 ) -> JSONResponse:
-    logger.exception(
+    logger.error(
         "Unhandled request error",
         extra={
             "structured_fields": {

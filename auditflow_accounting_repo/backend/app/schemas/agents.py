@@ -40,6 +40,13 @@ class AgentError(BaseModel):
     retryable: bool = False
 
 
+class SafeAgentErrorEnvelope(BaseModel):
+    stage: AgentRole
+    code: str = Field(min_length=1)
+    message: str = Field(min_length=1)
+    retryable: bool = False
+
+
 class AgentOutputMetadata(BaseModel):
     contract_version: Literal["agent-output.v1"] = AGENT_OUTPUT_CONTRACT_VERSION
     agent_role: AgentRole
