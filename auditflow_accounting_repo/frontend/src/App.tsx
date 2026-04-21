@@ -66,9 +66,9 @@ export default function App() {
       ]);
       setSelectedDocumentId(document.id);
       setSelectedFile(null);
-      setMessage(`Document uploaded: ${document.filename}`);
+      setMessage(`Documento enviado: ${document.filename}`);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Upload failed.");
+      setErrorMessage(error instanceof Error ? error.message : "Falha no envio.");
     } finally {
       setRequestState("idle");
     }
@@ -83,9 +83,9 @@ export default function App() {
     try {
       const report = await analyzeDocument(document.id);
       setReports((current) => ({ ...current, [document.id]: report }));
-      setMessage(`Analysis completed for ${document.filename}`);
+      setMessage(`Análise concluída para ${document.filename}`);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Analysis failed.");
+      setErrorMessage(error instanceof Error ? error.message : "Falha na análise.");
     } finally {
       setRequestState("idle");
     }
@@ -134,19 +134,19 @@ function Header({ apiHealthy }: { apiHealthy: boolean | null }) {
     <header className="app-header">
       <div>
         <p className="product-name">AuditFlow</p>
-        <h1>Scoped document review</h1>
+        <h1>Revisão documental com escopo definido</h1>
         <p className="header-copy">
-          A focused check for documentation, approval, value, classification, and
-          scoped normative inconsistencies.
+          Uma verificação focada em inconsistências de documentação, aprovação,
+          valores, classificação e aderência normativa no escopo definido.
         </p>
       </div>
       <div className="api-status">
         <span className={apiHealthy ? "status-dot ok" : "status-dot"} />
         {apiHealthy === null
-          ? "Checking backend"
+          ? "Verificando backend"
           : apiHealthy
             ? "Backend online"
-            : "Backend unavailable"}
+            : "Backend indisponível"}
       </div>
     </header>
   );
@@ -166,9 +166,9 @@ function UploadSection({
   return (
     <section className="panel upload-section" aria-labelledby="upload-title">
       <div>
-        <p className="eyebrow">1. Upload</p>
-        <h2 id="upload-title">Add a support document</h2>
-        <p className="muted">PDF, DOCX, or TXT. The file is stored before analysis.</p>
+        <p className="eyebrow">1. Envio</p>
+        <h2 id="upload-title">Adicione um documento de suporte</h2>
+        <p className="muted">PDF, DOCX ou TXT. O arquivo é armazenado antes da análise.</p>
       </div>
       <label className="file-input">
         <input
@@ -176,7 +176,7 @@ function UploadSection({
           onChange={(event) => onFileChange(event.target.files?.[0] ?? null)}
           type="file"
         />
-        <span>{selectedFile ? selectedFile.name : "Choose file"}</span>
+        <span>{selectedFile ? selectedFile.name : "Escolher arquivo"}</span>
       </label>
       <button
         className="primary-button"
@@ -184,7 +184,7 @@ function UploadSection({
         onClick={onUpload}
         type="button"
       >
-        {isUploading ? "Uploading..." : "Upload"}
+        {isUploading ? "Enviando..." : "Enviar"}
       </button>
     </section>
   );
@@ -207,10 +207,10 @@ function DocumentsSection({
     <section className="panel" aria-labelledby="documents-title">
       <div className="section-heading">
         <div>
-          <p className="eyebrow">2. Documents</p>
-          <h2 id="documents-title">Uploaded in this browser</h2>
+          <p className="eyebrow">2. Documentos</p>
+          <h2 id="documents-title">Enviados neste navegador</h2>
         </div>
-        <span className="quiet-note">Session list</span>
+        <span className="quiet-note">Lista da sessão</span>
       </div>
 
       {documents.length ? (
@@ -239,14 +239,14 @@ function DocumentsSection({
                 type="button"
               >
                 {isAnalyzing && document.id === selectedDocumentId
-                  ? "Analyzing..."
-                  : "Analyze"}
+                  ? "Analisando..."
+                  : "Analisar"}
               </button>
             </article>
           ))}
         </div>
       ) : (
-        <p className="empty-text">Upload a document to start.</p>
+        <p className="empty-text">Envie um documento para começar.</p>
       )}
     </section>
   );
@@ -264,10 +264,10 @@ function AnalysisResultCard({
   if (!report || !finalResponse) {
     return (
       <section className="panel result-empty" aria-labelledby="result-title">
-        <p className="eyebrow">3. Result</p>
-        <h2 id="result-title">Run an analysis to see the conclusion</h2>
+        <p className="eyebrow">3. Resultado</p>
+        <h2 id="result-title">Execute uma análise para ver a conclusão</h2>
         <p className="muted">
-          The result will stay on this page and focus on the decision-ready output.
+          O resultado ficará nesta página e priorizará a resposta pronta para decisão.
         </p>
       </section>
     );
@@ -282,11 +282,11 @@ function AnalysisResultCard({
     <section className="result-stack" aria-labelledby="result-title">
       <div className="panel result-header">
         <div>
-          <p className="eyebrow">3. Result</p>
+          <p className="eyebrow">3. Resultado</p>
           <h2 id="result-title">{document?.filename ?? report.summary.source_filename}</h2>
           <p className="muted">
-            {report.summary.total_findings} finding{report.summary.total_findings === 1 ? "" : "s"} ·
-            {" "}review required: {report.summary.review_required_count}
+            {report.summary.total_findings} achado{report.summary.total_findings === 1 ? "" : "s"} ·{" "}
+            revisão necessária: {report.summary.review_required_count}
           </p>
         </div>
         <ConclusionBadge conclusion={finalResponse.conclusion} />
@@ -312,7 +312,7 @@ function ConclusionBadge({ conclusion }: { conclusion: string }) {
   const tone = conclusionTone(conclusion);
   return (
     <div className={`conclusion-badge ${tone}`}>
-      <span>Conclusion</span>
+      <span>Conclusão</span>
       <strong>{normalizeConclusion(conclusion)}</strong>
     </div>
   );
@@ -321,8 +321,8 @@ function ConclusionBadge({ conclusion }: { conclusion: string }) {
 function FindingsList({ findings }: { findings: FinalResponse["top_findings"] }) {
   return (
     <section className="panel" aria-labelledby="findings-title">
-      <p className="eyebrow">Top findings</p>
-      <h2 id="findings-title">Most relevant issues</h2>
+      <p className="eyebrow">Principais achados</p>
+      <h2 id="findings-title">Pontos mais relevantes</h2>
       {findings.length ? (
         <div className="finding-list">
           {findings.map((finding) => (
@@ -339,7 +339,7 @@ function FindingsList({ findings }: { findings: FinalResponse["top_findings"] })
           ))}
         </div>
       ) : (
-        <p className="empty-text">No evidence-backed issue was returned.</p>
+        <p className="empty-text">Nenhum problema com evidência foi retornado.</p>
       )}
     </section>
   );
@@ -356,8 +356,8 @@ function MissingItemsList({
 
   return (
     <section className="panel" aria-labelledby="missing-title">
-      <p className="eyebrow">Missing items</p>
-      <h2 id="missing-title">Documentary gaps</h2>
+      <p className="eyebrow">Itens ausentes</p>
+      <h2 id="missing-title">Lacunas documentais</h2>
       {items.length ? (
         <ul className="missing-list">
           {items.map((item) => (
@@ -365,7 +365,7 @@ function MissingItemsList({
           ))}
         </ul>
       ) : (
-        <p className="empty-text">No missing items were highlighted.</p>
+        <p className="empty-text">Nenhum item ausente foi destacado.</p>
       )}
     </section>
   );
@@ -374,8 +374,8 @@ function MissingItemsList({
 function NormativeRationaleCard({ rationale }: { rationale: string }) {
   return (
     <section className="panel compact-panel" aria-labelledby="rationale-title">
-      <p className="eyebrow">Normative rationale</p>
-      <h2 id="rationale-title">Why this matters</h2>
+      <p className="eyebrow">Justificativa normativa</p>
+      <h2 id="rationale-title">Por que isso importa</h2>
       <p>{rationale}</p>
     </section>
   );
@@ -384,8 +384,8 @@ function NormativeRationaleCard({ rationale }: { rationale: string }) {
 function RecommendedActionCard({ action }: { action: string }) {
   return (
     <section className="panel compact-panel" aria-labelledby="action-title">
-      <p className="eyebrow">Recommended action</p>
-      <h2 id="action-title">Next step</h2>
+      <p className="eyebrow">Ação recomendada</p>
+      <h2 id="action-title">Próximo passo</h2>
       <p>{action}</p>
     </section>
   );
@@ -400,10 +400,10 @@ function OptionalDetailsAccordion({
 }) {
   return (
     <details className="panel optional-details">
-      <summary>Optional details</summary>
+      <summary>Detalhes opcionais</summary>
       <div className="details-grid">
         <div>
-          <h3>Evidence</h3>
+          <h3>Evidências</h3>
           {evidence.length ? (
             <ul className="detail-list">
               {evidence.map((item, index) => (
@@ -414,11 +414,11 @@ function OptionalDetailsAccordion({
               ))}
             </ul>
           ) : (
-            <p className="empty-text">No evidence excerpts returned.</p>
+            <p className="empty-text">Nenhum trecho de evidência foi retornado.</p>
           )}
         </div>
         <div>
-          <h3>Follow-up</h3>
+          <h3>Perguntas complementares</h3>
           {report.follow_up_questions.length ? (
             <ul className="detail-list">
               {report.follow_up_questions.slice(0, 5).map((question) => (
@@ -426,12 +426,12 @@ function OptionalDetailsAccordion({
               ))}
             </ul>
           ) : (
-            <p className="empty-text">No follow-up questions returned.</p>
+            <p className="empty-text">Nenhuma pergunta complementar foi retornada.</p>
           )}
           <div className="metadata-box">
-            <span>Analysis ID</span>
+            <span>ID da análise</span>
             <strong>{report.analysis_id}</strong>
-            <span>Generated</span>
+            <span>Gerado em</span>
             <strong>{new Date(report.generated_at).toLocaleString()}</strong>
           </div>
         </div>
@@ -463,10 +463,10 @@ function getFinalResponse(report: AnalysisReport): FinalResponse {
       .map((finding) => finding.title),
     normative_rationale:
       report.scoped_answer?.rationale ??
-      "The backend did not return a short normative rationale.",
+      "O backend não retornou uma justificativa normativa curta.",
     recommended_action:
       report.follow_up_questions[0]?.question ??
-      "Review the result and request missing support if needed.",
+      "Revise o resultado e solicite o suporte ausente, se necessário.",
   };
 }
 
@@ -509,14 +509,17 @@ function mergeMissingItems(
 
 function normalizeConclusion(conclusion: string) {
   const normalized = conclusion.trim().toUpperCase();
-  if (normalized === "YES" || normalized === "NO") {
-    return normalized;
+  if (normalized === "YES") {
+    return "SIM";
   }
-  return "INDETERMINATE / HUMAN REVIEW REQUIRED";
+  if (normalized === "NO") {
+    return "NÃO";
+  }
+  return "INDETERMINADO / REVISÃO HUMANA NECESSÁRIA";
 }
 
 function conclusionTone(conclusion: string) {
-  const normalized = normalizeConclusion(conclusion);
+  const normalized = conclusion.trim().toUpperCase();
   if (normalized === "YES") {
     return "attention";
   }

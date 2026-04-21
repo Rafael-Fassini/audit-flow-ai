@@ -40,7 +40,7 @@ async function parseResponse<T>(response: Response): Promise<T> {
     const message =
       apiError?.error?.message ??
       (typeof apiError?.detail === "string" ? apiError.detail : null) ??
-      `Request failed with status ${response.status}`;
+      `A requisição falhou com status ${response.status}`;
     throw new Error(message);
   }
   return payload as T;
